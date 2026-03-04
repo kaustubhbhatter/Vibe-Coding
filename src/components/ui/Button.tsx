@@ -8,16 +8,16 @@ const buttonVariants = cva(
   {
     variants: {
       variant: {
-        default: "bg-cyan-500 text-slate-950 hover:bg-cyan-400 shadow-[0_0_15px_rgba(6,182,212,0.5)]",
+        default: "bg-cyan-600 text-white hover:bg-cyan-500 dark:bg-cyan-500 dark:text-slate-950 dark:hover:bg-cyan-400 shadow-md shadow-cyan-500/20",
         destructive:
-          "bg-red-500 text-slate-50 hover:bg-red-600 shadow-[0_0_15px_rgba(239,68,68,0.5)]",
+          "bg-red-500 text-white hover:bg-red-600 dark:bg-red-900 dark:text-red-100 dark:hover:bg-red-800 shadow-md shadow-red-500/20",
         outline:
-          "border border-cyan-500/50 bg-transparent hover:bg-cyan-950/30 text-cyan-400",
+          "border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 hover:bg-slate-50 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-300",
         secondary:
-          "bg-slate-800 text-slate-50 hover:bg-slate-700 border border-slate-700",
-        ghost: "hover:bg-slate-800 hover:text-slate-50",
-        link: "text-cyan-400 underline-offset-4 hover:underline",
-        glass: "bg-white/10 backdrop-blur-md border border-white/20 text-white hover:bg-white/20",
+          "bg-slate-100 dark:bg-slate-800 text-slate-900 dark:text-slate-100 hover:bg-slate-200 dark:hover:bg-slate-700 border border-slate-200 dark:border-slate-700",
+        ghost: "hover:bg-slate-100 dark:hover:bg-slate-800 hover:text-slate-900 dark:hover:text-slate-100 text-slate-600 dark:text-slate-400",
+        link: "text-cyan-600 dark:text-cyan-400 underline-offset-4 hover:underline",
+        glass: "bg-white/50 dark:bg-white/10 backdrop-blur-md border border-white/60 dark:border-white/20 text-slate-900 dark:text-white hover:bg-white/80 dark:hover:bg-white/20",
       },
       size: {
         default: "h-10 px-4 py-2",

@@ -6,6 +6,8 @@ import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
 import { Select } from "@/components/ui/Select";
 import { TransactionType } from "@/types";
+import { cn } from "@/lib/utils";
+import { formatCurrency } from "@/lib/utils";
 
 interface AddTransactionModalProps {
   isOpen: boolean;
@@ -60,17 +62,18 @@ export function AddTransactionModal({ isOpen, onClose }: AddTransactionModalProp
   return (
     <Modal isOpen={isOpen} onClose={onClose} title="Add Transaction">
       <form onSubmit={handleSubmit} className="space-y-4">
-        <div className="flex gap-2 p-1 bg-slate-800 rounded-lg">
+        <div className="flex gap-2 p-1 bg-slate-100 dark:bg-slate-800 rounded-lg">
           {(["expense", "income", "transfer"] as const).map((t) => (
             <button
               key={t}
               type="button"
               onClick={() => setType(t)}
-              className={`flex-1 py-2 text-sm font-medium rounded-md transition-all ${
+              className={cn(
+                "flex-1 py-2 text-sm font-medium rounded-md transition-all",
                 type === t
-                  ? "bg-cyan-500 text-slate-950 shadow-lg"
-                  : "text-slate-400 hover:text-slate-200"
-              }`}
+                  ? "bg-white dark:bg-slate-700 text-cyan-600 dark:text-cyan-400 shadow-sm"
+                  : "text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200"
+              )}
             >
               {t.charAt(0).toUpperCase() + t.slice(1)}
             </button>
@@ -78,7 +81,7 @@ export function AddTransactionModal({ isOpen, onClose }: AddTransactionModalProp
         </div>
 
         <div>
-          <label className="text-xs text-slate-400 mb-1 block">Amount</label>
+          <label className="text-xs text-slate-500 dark:text-slate-400 mb-1 block">Amount</label>
           <Input
             type="number"
             step="0.01"
@@ -92,7 +95,7 @@ export function AddTransactionModal({ isOpen, onClose }: AddTransactionModalProp
 
         <div className="grid grid-cols-2 gap-4">
           <div>
-            <label className="text-xs text-slate-400 mb-1 block">Date</label>
+            <label className="text-xs text-slate-500 dark:text-slate-400 mb-1 block">Date</label>
             <Input
               type="datetime-local"
               value={date}
@@ -102,7 +105,7 @@ export function AddTransactionModal({ isOpen, onClose }: AddTransactionModalProp
           
           {type !== "transfer" && (
             <div>
-              <label className="text-xs text-slate-400 mb-1 block">Category</label>
+              <label className="text-xs text-slate-500 dark:text-slate-400 mb-1 block">Category</label>
               <Select
                 value={categoryId}
                 onChange={(e) => setCategoryId(e.target.value)}
@@ -119,7 +122,7 @@ export function AddTransactionModal({ isOpen, onClose }: AddTransactionModalProp
 
         <div className="grid grid-cols-2 gap-4">
           <div>
-            <label className="text-xs text-slate-400 mb-1 block">
+            <label className="text-xs text-slate-500 dark:text-slate-400 mb-1 block">
               {type === "transfer" ? "From Account" : "Account"}
             </label>
             <Select
@@ -136,7 +139,7 @@ export function AddTransactionModal({ isOpen, onClose }: AddTransactionModalProp
 
           {type === "transfer" && (
             <div>
-              <label className="text-xs text-slate-400 mb-1 block">To Account</label>
+              <label className="text-xs text-slate-500 dark:text-slate-400 mb-1 block">To Account</label>
               <Select
                 value={toAccountId}
                 onChange={(e) => setToAccountId(e.target.value)}
@@ -155,7 +158,7 @@ export function AddTransactionModal({ isOpen, onClose }: AddTransactionModalProp
         </div>
 
         <div>
-          <label className="text-xs text-slate-400 mb-1 block">Note</label>
+          <label className="text-xs text-slate-500 dark:text-slate-400 mb-1 block">Note</label>
           <Input
             value={note}
             onChange={(e) => setNote(e.target.value)}

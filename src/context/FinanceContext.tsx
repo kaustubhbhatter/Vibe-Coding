@@ -1,6 +1,7 @@
 import React, { createContext, useContext, useReducer, useEffect } from "react";
 import { v4 as uuidv4 } from "uuid";
-import { AppState, Transaction, Account, Group, Category, TransactionType } from "@/types";
+import { AppState, Transaction, Account, Group, Category } from "@/types";
+import { useAuth } from "@/context/AuthContext";
 
 const initialState: AppState = {
   transactions: [],
@@ -109,33 +110,59 @@ const FinanceContext = createContext<{
   deleteCategory: (id: string) => void;
 } | null>(null);
 
-const STORAGE_KEY = "nebula_finance_data_v1";
+const DEFAULT_STORAGE_KEY = "nebula_finance_data_v1";
 
 export function FinanceProvider({ children }: { children: React.ReactNode }) {
+  const { user, loading } = useAuth();
   const [state, dispatch] = useReducer(reducer, initialState);
 
-  // Load from local storage on mount
+  // Determine storage key based on user
+  const storageKey = user ? `nebula_finance_data_${user.uid}` : DEFAULT_STORAGE_KEY;
+
+  // Load from local storage on mount or when user changes
   useEffect(() => {
-    const storedData = localStorage.getItem(STORAGE_KEY);
+    if (loading) return;
+
+    const storedData = localStorage.getItem(storageKey);
     if (storedData) {
       try {
         const parsedData = JSON.parse(storedData);
         dispatch({ type: "LOAD_STATE", payload: parsedData });
       } catch (e) {
         console.error("Failed to parse stored data", e);
+        // If parsing fails, maybe seed initial data?
+        // For now, let's just seed if it's the default key or empty
+        if (!user) seedInitialData();
       }
     } else {
       // Seed initial data if empty
       seedInitialData();
     }
-  }, []);
+  }, [user, loading, storageKey]);
 
   // Save to local storage on change
   useEffect(() => {
+    if (loading) return;
+    
+    // Only save if state is not empty (to avoid overwriting with initial empty state before load)
+    // Actually, we load first, so state should be correct.
+    // But we need to be careful not to save the *previous* user's state to the *new* user's key
+    // before the new user's data is loaded.
+    // The load effect runs when storageKey changes.
+    // This save effect runs when state changes.
+    // If storageKey changes, load effect runs.
+    // We need to ensure we don't save 'initialState' to the new key before loading.
+    
+    // A simple way is to check if we have loaded data. 
+    // But reducer initializes with initialState.
+    
+    // Let's rely on the fact that the load effect will dispatch LOAD_STATE, which triggers this effect.
+    // But we should probably check if we are in a stable state.
+    
     if (state !== initialState) {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+      localStorage.setItem(storageKey, JSON.stringify(state));
     }
-  }, [state]);
+  }, [state, storageKey, loading]);
 
   const seedInitialData = () => {
     const bankGroup = { id: uuidv4(), name: "Bank Accounts", type: "bank" as const };

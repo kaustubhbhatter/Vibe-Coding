@@ -64,38 +64,38 @@ export function Transactions() {
   }, [state.transactions]);
 
   return (
-    <div className="space-y-6 pb-24">
+    <div className="space-y-6 pb-24 md:pb-0">
       {/* Monthly Summary Card */}
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.5 }}
       >
-        <Card variant="glass" className="relative overflow-hidden border-none bg-gradient-to-br from-slate-900/80 to-slate-800/80">
-          <div className="absolute top-0 right-0 w-32 h-32 bg-cyan-500/10 rounded-full blur-3xl -mr-10 -mt-10" />
-          <div className="absolute bottom-0 left-0 w-32 h-32 bg-fuchsia-500/10 rounded-full blur-3xl -ml-10 -mb-10" />
+        <Card variant="glass" className="relative overflow-hidden border-none bg-gradient-to-br from-slate-900 to-slate-800 text-white shadow-xl shadow-slate-200/50 dark:shadow-black/50">
+          <div className="absolute top-0 right-0 w-32 h-32 bg-cyan-500/20 rounded-full blur-3xl -mr-10 -mt-10" />
+          <div className="absolute bottom-0 left-0 w-32 h-32 bg-fuchsia-500/20 rounded-full blur-3xl -ml-10 -mb-10" />
           
           <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-slate-400 uppercase tracking-wider">
+            <CardTitle className="text-sm font-medium text-slate-300 uppercase tracking-wider">
               {format(new Date(), "MMMM yyyy")} Overview
             </CardTitle>
           </CardHeader>
           <CardContent>
             <div className="grid grid-cols-3 gap-4 text-center">
               <div>
-                <p className="text-xs text-slate-500 mb-1">Income</p>
+                <p className="text-xs text-slate-400 mb-1">Income</p>
                 <p className="text-lg font-semibold text-emerald-400">
                   {formatCurrency(monthlyStats.income)}
                 </p>
               </div>
               <div>
-                <p className="text-xs text-slate-500 mb-1">Expenses</p>
+                <p className="text-xs text-slate-400 mb-1">Expenses</p>
                 <p className="text-lg font-semibold text-rose-400">
                   {formatCurrency(monthlyStats.expense)}
                 </p>
               </div>
               <div>
-                <p className="text-xs text-slate-500 mb-1">Net</p>
+                <p className="text-xs text-slate-400 mb-1">Net</p>
                 <p className={cn("text-lg font-semibold", monthlyStats.net >= 0 ? "text-cyan-400" : "text-rose-400")}>
                   {formatCurrency(monthlyStats.net)}
                 </p>
@@ -108,21 +108,21 @@ export function Transactions() {
       {/* Filters & Sort */}
       <div className="flex items-center justify-between px-2">
         <div className="flex items-center gap-2">
-          <Filter size={16} className="text-slate-500" />
+          <Filter size={16} className="text-slate-500 dark:text-slate-400" />
           <select
             value={filterType}
             onChange={(e) => setFilterType(e.target.value as any)}
-            className="bg-transparent text-sm text-slate-400 focus:outline-none cursor-pointer hover:text-slate-200 transition-colors"
+            className="bg-transparent text-sm text-slate-600 dark:text-slate-300 focus:outline-none cursor-pointer hover:text-slate-900 dark:hover:text-slate-100 transition-colors"
           >
-            <option value="all">All Transactions</option>
-            <option value="income">Income</option>
-            <option value="expense">Expense</option>
-            <option value="transfer">Transfers</option>
+            <option value="all" className="bg-white dark:bg-slate-900">All Transactions</option>
+            <option value="income" className="bg-white dark:bg-slate-900">Income</option>
+            <option value="expense" className="bg-white dark:bg-slate-900">Expense</option>
+            <option value="transfer" className="bg-white dark:bg-slate-900">Transfers</option>
           </select>
         </div>
         <button
           onClick={() => setSortOrder(sortOrder === "desc" ? "asc" : "desc")}
-          className="flex items-center gap-1 text-xs text-slate-500 hover:text-slate-200 transition-colors"
+          className="flex items-center gap-1 text-xs text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200 transition-colors"
         >
           <ArrowDownUp size={14} />
           {sortOrder === "desc" ? "Newest First" : "Oldest First"}
@@ -131,7 +131,7 @@ export function Transactions() {
 
       {/* Transactions List */}
       <div className="space-y-4">
-        {Object.entries(groupedTransactions).map(([date, dayTransactions], index) => {
+        {(Object.entries(groupedTransactions) as [string, Transaction[]][]).map(([date, dayTransactions], index) => {
           const dayIncome = dayTransactions
             .filter((t) => t.type === "income")
             .reduce((acc, t) => acc + t.amount, 0);
@@ -147,12 +147,12 @@ export function Transactions() {
               transition={{ delay: index * 0.05 }}
             >
               <div className="flex items-center justify-between px-2 mb-2">
-                <h3 className="text-sm font-medium text-slate-400">
+                <h3 className="text-sm font-medium text-slate-500 dark:text-slate-400">
                   {format(parseISO(date), "EEE, MMM d")}
                 </h3>
-                <div className="text-xs text-slate-600 flex gap-2">
-                  {dayIncome > 0 && <span className="text-emerald-500/70">+{formatCurrency(dayIncome)}</span>}
-                  {dayExpense > 0 && <span className="text-rose-500/70">-{formatCurrency(dayExpense)}</span>}
+                <div className="text-xs text-slate-500 dark:text-slate-400 flex gap-2">
+                  {dayIncome > 0 && <span className="text-emerald-600 dark:text-emerald-400">+{formatCurrency(dayIncome)}</span>}
+                  {dayExpense > 0 && <span className="text-rose-600 dark:text-rose-400">-{formatCurrency(dayExpense)}</span>}
                 </div>
               </div>
               
@@ -172,7 +172,7 @@ export function Transactions() {
         })}
 
         {transactions.length === 0 && (
-          <div className="text-center py-12 text-slate-600">
+          <div className="text-center py-12 text-slate-400 dark:text-slate-500">
             <p>No transactions found.</p>
           </div>
         )}

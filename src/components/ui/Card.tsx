@@ -9,16 +9,16 @@ const Card = React.forwardRef<
   }
 >(({ className, variant = "default", ...props }, ref) => {
   const variants = {
-    default: "bg-slate-900 border border-slate-800",
-    glass: "bg-white/5 backdrop-blur-xl border border-white/10 shadow-[0_8px_32px_0_rgba(31,38,135,0.37)]",
-    neon: "bg-slate-950 border border-cyan-500/20 shadow-[0_0_15px_rgba(6,182,212,0.1)]",
+    default: "bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-sm",
+    glass: "bg-white/60 dark:bg-slate-900/60 backdrop-blur-xl border border-white/40 dark:border-white/10 shadow-xl shadow-slate-200/50 dark:shadow-black/50",
+    neon: "bg-white dark:bg-slate-950 border border-cyan-100 dark:border-cyan-500/20 shadow-[0_0_15px_rgba(6,182,212,0.1)]",
   };
 
   return (
     <motion.div
       ref={ref}
       className={cn(
-        "rounded-xl text-slate-50 shadow-sm",
+        "rounded-xl text-slate-900 dark:text-slate-50 transition-colors duration-300",
         variants[variant],
         className
       )}
@@ -47,7 +47,7 @@ const CardTitle = React.forwardRef<
   <h3
     ref={ref}
     className={cn(
-      "text-2xl font-semibold leading-none tracking-tight",
+      "text-2xl font-semibold leading-none tracking-tight text-slate-900 dark:text-slate-50",
       className
     )}
     {...props}
@@ -61,7 +61,7 @@ const CardDescription = React.forwardRef<
 >(({ className, ...props }, ref) => (
   <p
     ref={ref}
-    className={cn("text-sm text-slate-400", className)}
+    className={cn("text-sm text-slate-500 dark:text-slate-400", className)}
     {...props}
   />
 ));

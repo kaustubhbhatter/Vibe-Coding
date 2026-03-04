@@ -13,13 +13,13 @@ interface TransactionItemProps {
   onClick?: () => void;
 }
 
-export function TransactionItem({
+export const TransactionItem: React.FC<TransactionItemProps> = ({
   transaction,
   category,
   account,
   toAccount,
   onClick,
-}: TransactionItemProps) {
+}) => {
   const isTransfer = transaction.type === "transfer";
   const isIncome = transaction.type === "income";
 
@@ -29,19 +29,19 @@ export function TransactionItem({
       initial={{ opacity: 0, y: 10 }}
       animate={{ opacity: 1, y: 0 }}
       exit={{ opacity: 0, scale: 0.95 }}
-      whileHover={{ scale: 1.02, backgroundColor: "rgba(255,255,255,0.05)" }}
+      whileHover={{ scale: 1.01, backgroundColor: "rgba(0,0,0,0.02)" }}
       onClick={onClick}
-      className="flex items-center justify-between p-3 rounded-xl cursor-pointer group transition-colors border border-transparent hover:border-white/5"
+      className="flex items-center justify-between p-3 rounded-xl cursor-pointer group transition-colors border border-transparent hover:border-slate-200/50 dark:hover:border-slate-700/50 bg-white/50 dark:bg-white/5 md:bg-white md:dark:bg-slate-900 border-slate-100 dark:border-slate-800 shadow-sm"
     >
       <div className="flex items-center gap-3">
         <div
           className={cn(
-            "w-10 h-10 rounded-full flex items-center justify-center shadow-lg",
+            "w-10 h-10 rounded-full flex items-center justify-center shadow-sm",
             isTransfer
-              ? "bg-blue-500/20 text-blue-400"
+              ? "bg-blue-50 dark:bg-blue-500/20 text-blue-600 dark:text-blue-400"
               : isIncome
-              ? "bg-emerald-500/20 text-emerald-400"
-              : "bg-rose-500/20 text-rose-400"
+              ? "bg-emerald-50 dark:bg-emerald-500/20 text-emerald-600 dark:text-emerald-400"
+              : "bg-rose-50 dark:bg-rose-500/20 text-rose-600 dark:text-rose-400"
           )}
         >
           {isTransfer ? (
@@ -53,15 +53,15 @@ export function TransactionItem({
           )}
         </div>
         <div>
-          <p className="font-medium text-slate-200 text-sm">
+          <p className="font-medium text-slate-900 dark:text-slate-200 text-sm">
             {isTransfer
               ? `Transfer to ${toAccount?.name || "Unknown"}`
               : category?.name || "Uncategorized"}
           </p>
-          <p className="text-xs text-slate-500 flex items-center gap-1">
+          <p className="text-xs text-slate-500 dark:text-slate-400 flex items-center gap-1">
             <span className="w-2 h-2 rounded-full" style={{ backgroundColor: account.color || "#64748b" }} />
             {account.name}
-            {transaction.note && <span className="text-slate-600">• {transaction.note}</span>}
+            {transaction.note && <span className="text-slate-400 dark:text-slate-500">• {transaction.note}</span>}
           </p>
         </div>
       </div>
@@ -70,19 +70,19 @@ export function TransactionItem({
           className={cn(
             "font-mono font-medium text-sm",
             isTransfer
-              ? "text-slate-400"
+              ? "text-slate-600 dark:text-slate-400"
               : isIncome
-              ? "text-emerald-400"
-              : "text-rose-400"
+              ? "text-emerald-600 dark:text-emerald-400"
+              : "text-rose-600 dark:text-rose-400"
           )}
         >
           {isTransfer ? "" : isIncome ? "+" : "-"}
           {formatCurrency(transaction.amount)}
         </p>
-        <p className="text-[10px] text-slate-600">
+        <p className="text-[10px] text-slate-400 dark:text-slate-500">
           {format(new Date(transaction.date), "h:mm a")}
         </p>
       </div>
     </motion.div>
   );
-}
+};

@@ -1,7 +1,7 @@
 import React, { useMemo, useState } from "react";
 import { useFinance } from "@/context/FinanceContext";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/Card";
-import { formatCurrency } from "@/lib/utils";
+import { formatCurrency, cn } from "@/lib/utils";
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip, AreaChart, Area, XAxis, YAxis, CartesianGrid, BarChart, Bar, Legend } from "recharts";
 import { format, parseISO, startOfMonth, endOfMonth, eachDayOfInterval, isSameMonth, subMonths } from "date-fns";
 import { motion } from "framer-motion";
@@ -59,17 +59,18 @@ export function Analytics() {
   }, [state.transactions, timeRange]);
 
   return (
-    <div className="space-y-6 pb-24">
+    <div className="space-y-6 pb-24 md:pb-0">
       <div className="flex justify-end space-x-2">
         {(["current", "last3", "last6"] as const).map(range => (
           <button
             key={range}
             onClick={() => setTimeRange(range)}
-            className={`px-3 py-1 text-xs rounded-full transition-colors ${
+            className={cn(
+              "px-3 py-1 text-xs rounded-full transition-colors",
               timeRange === range 
-                ? "bg-cyan-500/20 text-cyan-400 border border-cyan-500/30" 
-                : "text-slate-500 hover:text-slate-300"
-            }`}
+                ? "bg-cyan-500 text-white shadow-md shadow-cyan-500/20" 
+                : "text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800"
+            )}
           >
             {range === "current" ? "This Month" : range === "last3" ? "3 Months" : "6 Months"}
           </button>
@@ -82,9 +83,9 @@ export function Analytics() {
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.5 }}
       >
-        <Card className="bg-slate-900/50 border-slate-800">
+        <Card className="bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800">
           <CardHeader>
-            <CardTitle className="text-sm text-slate-400 uppercase tracking-wider">Spending by Category</CardTitle>
+            <CardTitle className="text-sm text-slate-500 dark:text-slate-400 uppercase tracking-wider">Spending by Category</CardTitle>
           </CardHeader>
           <CardContent className="h-[300px]">
             <ResponsiveContainer width="100%" height="100%">
@@ -99,15 +100,20 @@ export function Analytics() {
                   dataKey="value"
                 >
                   {spendingByCategory.map((entry, index) => (
-                    <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} stroke="rgba(0,0,0,0.5)" />
+                    <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} stroke="transparent" />
                   ))}
                 </Pie>
                 <Tooltip 
-                  contentStyle={{ backgroundColor: '#0f172a', borderColor: '#1e293b', borderRadius: '8px' }}
-                  itemStyle={{ color: '#e2e8f0' }}
+                  contentStyle={{ backgroundColor: 'rgba(255, 255, 255, 0.9)', borderRadius: '8px', border: 'none', boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)', color: '#0f172a' }}
+                  itemStyle={{ color: '#0f172a' }}
                   formatter={(value: number) => formatCurrency(value)}
                 />
-                <Legend verticalAlign="bottom" height={36} iconType="circle" />
+                <Legend 
+                  verticalAlign="bottom" 
+                  height={36} 
+                  iconType="circle" 
+                  formatter={(value) => <span className="text-slate-600 dark:text-slate-400 text-xs ml-1">{value}</span>}
+                />
               </PieChart>
             </ResponsiveContainer>
           </CardContent>
@@ -120,9 +126,9 @@ export function Analytics() {
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.5, delay: 0.2 }}
       >
-        <Card className="bg-slate-900/50 border-slate-800">
+        <Card className="bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800">
           <CardHeader>
-            <CardTitle className="text-sm text-slate-400 uppercase tracking-wider">Income vs Expense</CardTitle>
+            <CardTitle className="text-sm text-slate-500 dark:text-slate-400 uppercase tracking-wider">Income vs Expense</CardTitle>
           </CardHeader>
           <CardContent className="h-[300px]">
             <ResponsiveContainer width="100%" height="100%">
@@ -137,12 +143,12 @@ export function Analytics() {
                     <stop offset="95%" stopColor="#ef4444" stopOpacity={0}/>
                   </linearGradient>
                 </defs>
-                <CartesianGrid strokeDasharray="3 3" stroke="#1e293b" vertical={false} />
+                <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" className="dark:stroke-slate-800" vertical={false} />
                 <XAxis dataKey="date" stroke="#64748b" fontSize={10} tickLine={false} axisLine={false} />
-                <YAxis stroke="#64748b" fontSize={10} tickLine={false} axisLine={false} tickFormatter={(value) => `$${value}`} />
+                <YAxis stroke="#64748b" fontSize={10} tickLine={false} axisLine={false} tickFormatter={(value) => `₹${value}`} />
                 <Tooltip 
-                  contentStyle={{ backgroundColor: '#0f172a', borderColor: '#1e293b', borderRadius: '8px' }}
-                  itemStyle={{ color: '#e2e8f0' }}
+                  contentStyle={{ backgroundColor: 'rgba(255, 255, 255, 0.9)', borderRadius: '8px', border: 'none', boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)', color: '#0f172a' }}
+                  itemStyle={{ color: '#0f172a' }}
                   formatter={(value: number) => formatCurrency(value)}
                 />
                 <Area type="monotone" dataKey="income" stroke="#10b981" fillOpacity={1} fill="url(#colorIncome)" strokeWidth={2} />
