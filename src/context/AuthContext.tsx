@@ -45,7 +45,36 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const login = async () => {
     if (!auth) {
-      console.warn("Authentication is disabled due to missing configuration.");
+      console.warn("Authentication is disabled due to missing configuration. Using Demo User.");
+      // Demo Login
+      const demoUser: User = {
+        uid: "demo-user-123",
+        displayName: "Demo User",
+        email: "demo@example.com",
+        photoURL: null,
+        emailVerified: true,
+        isAnonymous: false,
+        metadata: {},
+        providerData: [],
+        refreshToken: "",
+        tenantId: null,
+        delete: async () => {},
+        getIdToken: async () => "",
+        getIdTokenResult: async () => ({
+          token: "",
+          signInProvider: "google",
+          claims: {},
+          authTime: "",
+          issuedAtTime: "",
+          expirationTime: "",
+          signInSecondFactor: null,
+        }),
+        reload: async () => {},
+        toJSON: () => ({}),
+        phoneNumber: null,
+        providerId: "google.com",
+      };
+      setUser(demoUser);
       return;
     }
     const provider = new GoogleAuthProvider();
@@ -57,7 +86,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   };
 
   const logout = async () => {
-    if (!auth) return;
+    if (!auth) {
+      setUser(null);
+      return;
+    }
     try {
       await signOut(auth);
     } catch (error) {

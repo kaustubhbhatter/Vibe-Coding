@@ -173,7 +173,7 @@ export function FinanceProvider({ children }: { children: React.ReactNode }) {
       id: uuidv4(),
       name: "Checking",
       groupId: bankGroup.id,
-      initialBalance: 1000,
+      initialBalance: 2500,
       excludeFromTotals: false,
       color: "cyan",
     };
@@ -182,7 +182,7 @@ export function FinanceProvider({ children }: { children: React.ReactNode }) {
       id: uuidv4(),
       name: "Primary Card",
       groupId: creditGroup.id,
-      initialBalance: 0,
+      initialBalance: -450,
       excludeFromTotals: false,
       color: "fuchsia",
     };
@@ -191,7 +191,7 @@ export function FinanceProvider({ children }: { children: React.ReactNode }) {
       id: uuidv4(),
       name: "Wallet",
       groupId: cashGroup.id,
-      initialBalance: 50,
+      initialBalance: 120,
       excludeFromTotals: false,
       color: "emerald",
     };
@@ -201,14 +201,90 @@ export function FinanceProvider({ children }: { children: React.ReactNode }) {
       { id: uuidv4(), name: "Transportation", type: "expense" as const, color: "blue" },
       { id: uuidv4(), name: "Utilities", type: "expense" as const, color: "yellow" },
       { id: uuidv4(), name: "Entertainment", type: "expense" as const, color: "purple" },
+      { id: uuidv4(), name: "Shopping", type: "expense" as const, color: "pink" },
       { id: uuidv4(), name: "Salary", type: "income" as const, color: "green" },
       { id: uuidv4(), name: "Investments", type: "income" as const, color: "indigo" },
+      { id: uuidv4(), name: "Freelance", type: "income" as const, color: "teal" },
+    ];
+
+    // Generate some dummy transactions
+    const transactions: Transaction[] = [
+      {
+        id: uuidv4(),
+        amount: 3200,
+        type: "income",
+        categoryId: categories[5].id, // Salary
+        accountId: checkingAccount.id,
+        date: new Date().toISOString(),
+        note: "Monthly Salary",
+        createdAt: Date.now(),
+      },
+      {
+        id: uuidv4(),
+        amount: 45,
+        type: "expense",
+        categoryId: categories[0].id, // Food
+        accountId: creditCard.id,
+        date: new Date(Date.now() - 86400000 * 1).toISOString(), // Yesterday
+        note: "Grocery Store",
+        createdAt: Date.now() - 86400000 * 1,
+      },
+      {
+        id: uuidv4(),
+        amount: 120,
+        type: "expense",
+        categoryId: categories[2].id, // Utilities
+        accountId: checkingAccount.id,
+        date: new Date(Date.now() - 86400000 * 2).toISOString(),
+        note: "Electric Bill",
+        createdAt: Date.now() - 86400000 * 2,
+      },
+      {
+        id: uuidv4(),
+        amount: 15,
+        type: "expense",
+        categoryId: categories[1].id, // Transportation
+        accountId: cashAccount.id,
+        date: new Date(Date.now() - 86400000 * 3).toISOString(),
+        note: "Uber Ride",
+        createdAt: Date.now() - 86400000 * 3,
+      },
+      {
+        id: uuidv4(),
+        amount: 85,
+        type: "expense",
+        categoryId: categories[3].id, // Entertainment
+        accountId: creditCard.id,
+        date: new Date(Date.now() - 86400000 * 4).toISOString(),
+        note: "Movie Night",
+        createdAt: Date.now() - 86400000 * 4,
+      },
+      {
+        id: uuidv4(),
+        amount: 250,
+        type: "income",
+        categoryId: categories[7].id, // Freelance
+        accountId: checkingAccount.id,
+        date: new Date(Date.now() - 86400000 * 5).toISOString(),
+        note: "Freelance Project",
+        createdAt: Date.now() - 86400000 * 5,
+      },
+      {
+        id: uuidv4(),
+        amount: 120,
+        type: "expense",
+        categoryId: categories[4].id, // Shopping
+        accountId: creditCard.id,
+        date: new Date(Date.now() - 86400000 * 6).toISOString(),
+        note: "New Sneakers",
+        createdAt: Date.now() - 86400000 * 6,
+      },
     ];
 
     dispatch({
       type: "LOAD_STATE",
       payload: {
-        transactions: [],
+        transactions: transactions,
         accounts: [checkingAccount, creditCard, cashAccount],
         groups: [bankGroup, creditGroup, cashGroup],
         categories: categories,
