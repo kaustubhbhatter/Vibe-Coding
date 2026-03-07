@@ -4,14 +4,25 @@ import { useFinance } from "@/context/FinanceContext";
 import { TransactionItem } from "@/components/transactions/TransactionItem";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/Card";
 import { formatCurrency, cn } from "@/lib/utils";
-import { motion } from "framer-motion";
-import { Filter, ArrowDownUp } from "lucide-react";
+import { motion, AnimatePresence } from "framer-motion";
+import { Filter, ArrowDownUp, X, Check } from "lucide-react";
 import { Transaction } from "@/types";
+import { TransactionModal } from "@/components/transactions/TransactionModal";
+import { Button } from "@/components/ui/Button";
 
 export function Transactions() {
-  const { state } = useFinance();
-  const [filterType, setFilterType] = useState<"all" | "income" | "expense" | "transfer">("all");
+  const { state, deleteTransaction } = useFinance();
+  const [filterType, setFilterType] = useState<"all" | "income" | "expense" | "transfer" | "budget">("all");
+
   const [sortOrder, setSortOrder] = useState<"desc" | "asc">("desc");
+  
+  const [editingTransaction, setEditingTransaction] = useState<Transaction | null>(null);
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+
+  // Advanced Filters
+  const [showFilters, setShowFilters] = useState(false);
+  const [selectedCategories, setSelectedCategories] = useState<string[]>([]);
+  const [selectedAccounts, setSelectedAccounts] = useState<string[]>([]);
 
   const transactions = useMemo(() => {
     let filtered = state.transactions;
@@ -20,12 +31,20 @@ export function Transactions() {
       filtered = filtered.filter((t) => t.type === filterType);
     }
 
+    if (selectedCategories.length > 0) {
+      filtered = filtered.filter(t => t.categoryId && selectedCategories.includes(t.categoryId));
+    }
+
+    if (selectedAccounts.length > 0) {
+      filtered = filtered.filter(t => selectedAccounts.includes(t.accountId) || (t.toAccountId && selectedAccounts.includes(t.toAccountId)));
+    }
+
     return filtered.sort((a, b) => {
       const dateA = new Date(a.date).getTime();
       const dateB = new Date(b.date).getTime();
       return sortOrder === "desc" ? dateB - dateA : dateA - dateB;
     });
-  }, [state.transactions, filterType, sortOrder]);
+  }, [state.transactions, filterType, sortOrder, selectedCategories, selectedAccounts]);
 
   const groupedTransactions = useMemo<{ [key: string]: Transaction[] }>(() => {
     const groups: { [key: string]: Transaction[] } = {};
@@ -62,6 +81,33 @@ export function Transactions() {
       net: income - expense,
     };
   }, [state.transactions]);
+
+  const handleEdit = (transaction: Transaction) => {
+    setEditingTransaction(transaction);
+    setIsEditModalOpen(true);
+  };
+
+  const handleDelete = (id: string) => {
+    if (window.confirm("Are you sure you want to delete this transaction?")) {
+      deleteTransaction(id);
+    }
+  };
+
+  const toggleCategory = (id: string) => {
+    setSelectedCategories(prev => prev.includes(id) ? prev.filter(c => c !== id) : [...prev, id]);
+  };
+
+  const toggleAccount = (id: string) => {
+    setSelectedAccounts(prev => prev.includes(id) ? prev.filter(a => a !== id) : [...prev, id]);
+  };
+
+  const clearFilters = () => {
+    setSelectedCategories([]);
+    setSelectedAccounts([]);
+    setFilterType("all");
+  };
+
+  const activeFilterCount = (filterType !== "all" ? 1 : 0) + selectedCategories.length + selectedAccounts.length;
 
   return (
     <div className="space-y-6 pb-24 md:pb-0">
@@ -106,27 +152,116 @@ export function Transactions() {
       </motion.div>
 
       {/* Filters & Sort */}
-      <div className="flex items-center justify-between px-2">
-        <div className="flex items-center gap-2">
-          <Filter size={16} className="text-slate-500 dark:text-slate-400" />
-          <select
-            value={filterType}
-            onChange={(e) => setFilterType(e.target.value as any)}
-            className="bg-transparent text-sm text-slate-600 dark:text-slate-300 focus:outline-none cursor-pointer hover:text-slate-900 dark:hover:text-slate-100 transition-colors"
+      <div className="flex flex-col gap-4">
+        <div className="flex items-center justify-between px-2">
+          <div className="flex items-center gap-2">
+            <Button 
+              variant={showFilters ? "primary" : "outline"} 
+              size="sm" 
+              onClick={() => setShowFilters(!showFilters)}
+              className="h-8 text-xs gap-2"
+            >
+              <Filter size={14} />
+              Filters
+              {activeFilterCount > 0 && (
+                <span className="bg-white/20 px-1.5 py-0.5 rounded-full text-[10px] font-bold">
+                  {activeFilterCount}
+                </span>
+              )}
+            </Button>
+            
+            {activeFilterCount > 0 && (
+              <Button variant="ghost" size="sm" onClick={clearFilters} className="h-8 text-xs text-slate-500 hover:text-rose-500">
+                <X size={14} className="mr-1" /> Clear
+              </Button>
+            )}
+          </div>
+          <button
+            onClick={() => setSortOrder(sortOrder === "desc" ? "asc" : "desc")}
+            className="flex items-center gap-1 text-xs text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200 transition-colors"
           >
-            <option value="all" className="bg-white dark:bg-slate-900">All Transactions</option>
-            <option value="income" className="bg-white dark:bg-slate-900">Income</option>
-            <option value="expense" className="bg-white dark:bg-slate-900">Expense</option>
-            <option value="transfer" className="bg-white dark:bg-slate-900">Transfers</option>
-          </select>
+            <ArrowDownUp size={14} />
+            {sortOrder === "desc" ? "Newest First" : "Oldest First"}
+          </button>
         </div>
-        <button
-          onClick={() => setSortOrder(sortOrder === "desc" ? "asc" : "desc")}
-          className="flex items-center gap-1 text-xs text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200 transition-colors"
-        >
-          <ArrowDownUp size={14} />
-          {sortOrder === "desc" ? "Newest First" : "Oldest First"}
-        </button>
+
+        <AnimatePresence>
+          {showFilters && (
+            <motion.div
+              initial={{ height: 0, opacity: 0 }}
+              animate={{ height: "auto", opacity: 1 }}
+              exit={{ height: 0, opacity: 0 }}
+              className="overflow-hidden"
+            >
+              <div className="bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 p-4 space-y-4 shadow-sm mx-2">
+                {/* Type Filter */}
+                <div>
+                  <label className="text-xs font-medium text-slate-500 dark:text-slate-400 mb-2 block uppercase">Type</label>
+                  <div className="flex flex-wrap gap-2">
+                    {["all", "income", "expense", "transfer", "budget"].map(type => (
+                      <button
+                        key={type}
+                        onClick={() => setFilterType(type as any)}
+                        className={cn(
+                          "px-3 py-1.5 rounded-lg text-xs font-medium transition-colors capitalize",
+                          filterType === type 
+                            ? "bg-cyan-500 text-white shadow-md shadow-cyan-500/20" 
+                            : "bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700"
+                        )}
+                      >
+                        {type}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Categories Filter */}
+                <div>
+                  <label className="text-xs font-medium text-slate-500 dark:text-slate-400 mb-2 block uppercase">Categories</label>
+                  <div className="flex flex-wrap gap-2">
+                    {state.categories.map(category => (
+                      <button
+                        key={category.id}
+                        onClick={() => toggleCategory(category.id)}
+                        className={cn(
+                          "px-3 py-1.5 rounded-lg text-xs font-medium transition-colors flex items-center gap-1.5 border",
+                          selectedCategories.includes(category.id)
+                            ? `bg-${category?.color || 'slate'}-50 dark:bg-${category?.color || 'slate'}-900/20 border-${category?.color || 'slate'}-200 dark:border-${category?.color || 'slate'}-800 text-${category?.color || 'slate'}-700 dark:text-${category?.color || 'slate'}-300`
+                            : "bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800 text-slate-600 dark:text-slate-400 hover:border-slate-300 dark:hover:border-slate-700"
+                        )}
+                      >
+                        {selectedCategories.includes(category.id) && <Check size={12} />}
+                        {category.name}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Accounts Filter */}
+                <div>
+                  <label className="text-xs font-medium text-slate-500 dark:text-slate-400 mb-2 block uppercase">Accounts</label>
+                  <div className="flex flex-wrap gap-2">
+                    {state.accounts.map(account => (
+                      <button
+                        key={account.id}
+                        onClick={() => toggleAccount(account.id)}
+                        className={cn(
+                          "px-3 py-1.5 rounded-lg text-xs font-medium transition-colors flex items-center gap-1.5 border",
+                          selectedAccounts.includes(account.id)
+                            ? `bg-${account?.color || 'slate'}-50 dark:bg-${account?.color || 'slate'}-900/20 border-${account?.color || 'slate'}-200 dark:border-${account?.color || 'slate'}-800 text-${account?.color || 'slate'}-700 dark:text-${account?.color || 'slate'}-300`
+                            : "bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800 text-slate-600 dark:text-slate-400 hover:border-slate-300 dark:hover:border-slate-700"
+                        )}
+                      >
+                        {selectedAccounts.includes(account.id) && <Check size={12} />}
+                        {account.name}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
       </div>
 
       {/* Transactions List */}
@@ -162,8 +297,11 @@ export function Transactions() {
                     key={t.id}
                     transaction={t}
                     category={state.categories.find((c) => c.id === t.categoryId)}
-                    account={state.accounts.find((a) => a.id === t.accountId)!}
+                    account={state.accounts.find((a) => a.id === t.accountId)}
                     toAccount={state.accounts.find((a) => a.id === t.toAccountId)}
+                    budget={state.budgets.find((b) => b.id === t.budgetId)}
+                    onEdit={handleEdit}
+                    onDelete={handleDelete}
                   />
                 ))}
               </div>
@@ -177,6 +315,15 @@ export function Transactions() {
           </div>
         )}
       </div>
+      
+      <TransactionModal 
+        isOpen={isEditModalOpen} 
+        onClose={() => {
+          setIsEditModalOpen(false);
+          setEditingTransaction(null);
+        }}
+        transaction={editingTransaction}
+      />
     </div>
   );
 }

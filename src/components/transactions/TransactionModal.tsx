@@ -5,71 +5,111 @@ import { Modal } from "@/components/ui/Modal";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
 import { Select } from "@/components/ui/Select";
-import { TransactionType } from "@/types";
+import { TransactionType, Transaction } from "@/types";
 import { cn } from "@/lib/utils";
-import { formatCurrency } from "@/lib/utils";
 
-interface AddTransactionModalProps {
+interface TransactionModalProps {
   isOpen: boolean;
   onClose: () => void;
+  transaction?: Transaction | null;
+  initialData?: Partial<Transaction>;
 }
 
-export function AddTransactionModal({ isOpen, onClose }: AddTransactionModalProps) {
-  const { state, addTransaction } = useFinance();
+export function TransactionModal({ isOpen, onClose, transaction, initialData }: TransactionModalProps) {
+  const { state, addTransaction, updateTransaction } = useFinance();
   const [amount, setAmount] = useState("");
   const [type, setType] = useState<TransactionType>("expense");
   const [categoryId, setCategoryId] = useState("");
   const [accountId, setAccountId] = useState("");
   const [toAccountId, setToAccountId] = useState("");
+  const [budgetId, setBudgetId] = useState("");
   const [date, setDate] = useState(format(new Date(), "yyyy-MM-dd'T'HH:mm"));
   const [note, setNote] = useState("");
 
   useEffect(() => {
     if (isOpen) {
-      // Reset form or set defaults
-      if (state.accounts.length > 0) {
-        setAccountId(state.accounts[0].id);
-      }
-      if (state.categories.length > 0) {
-        const expenseCategories = state.categories.filter(c => c.type === 'expense');
-        if (expenseCategories.length > 0) {
-            setCategoryId(expenseCategories[0].id);
+      if (transaction) {
+        // Edit Mode
+        setAmount(transaction.amount.toString());
+        setType(transaction.type);
+        setCategoryId(transaction.categoryId || "");
+        setAccountId(transaction.accountId);
+        setToAccountId(transaction.toAccountId || "");
+        setBudgetId(transaction.budgetId || "");
+        setDate(format(new Date(transaction.date), "yyyy-MM-dd'T'HH:mm"));
+        setNote(transaction.note || "");
+      } else {
+        // Add Mode - Reset form or set defaults
+        setAmount(initialData?.amount?.toString() || "");
+        setNote(initialData?.note || "");
+        setDate(initialData?.date ? format(new Date(initialData.date), "yyyy-MM-dd'T'HH:mm") : format(new Date(), "yyyy-MM-dd'T'HH:mm"));
+        setType(initialData?.type || "expense");
+        
+        if (state.accounts.length > 0) {
+          setAccountId(initialData?.accountId || state.accounts[0].id);
+        }
+        if (initialData?.toAccountId) {
+          setToAccountId(initialData.toAccountId);
+        }
+
+        if (state.categories.length > 0) {
+          const expenseCategories = state.categories.filter(c => c.type === 'expense');
+          if (expenseCategories.length > 0) {
+              setCategoryId(initialData?.categoryId || expenseCategories[0].id);
+          }
+        }
+        if (state.budgets.length > 0) {
+          setBudgetId(initialData?.budgetId || state.budgets[0].id);
         }
       }
     }
-  }, [isOpen, state.accounts, state.categories]);
+  }, [isOpen, transaction, initialData, state.accounts, state.categories, state.budgets]);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!amount || !accountId) return;
+    if (type === "transfer" && !toAccountId) return;
+    if (type === "budget" && !budgetId) return;
 
-    addTransaction({
+    const transactionData = {
       amount: parseFloat(amount),
       type,
-      categoryId: type === "transfer" ? undefined : categoryId,
+      categoryId: (type === "transfer" || type === "budget") ? undefined : categoryId,
       accountId,
       toAccountId: type === "transfer" ? toAccountId : undefined,
+      budgetId: type === "budget" ? budgetId : undefined,
       date,
       note,
-    });
+    };
+
+    if (transaction) {
+      updateTransaction({
+        ...transaction,
+        ...transactionData,
+      });
+    } else {
+      addTransaction(transactionData);
+    }
+    
     onClose();
     setAmount("");
     setNote("");
   };
 
   const filteredCategories = state.categories.filter((c) => c.type === type);
+  const budgetAccounts = state.accounts.filter(a => a.allowBudgeting);
 
   return (
-    <Modal isOpen={isOpen} onClose={onClose} title="Add Transaction">
+    <Modal isOpen={isOpen} onClose={onClose} title={transaction ? "Edit Transaction" : "Add Transaction"}>
       <form onSubmit={handleSubmit} className="space-y-4">
-        <div className="flex gap-2 p-1 bg-slate-100 dark:bg-slate-800 rounded-lg">
-          {(["expense", "income", "transfer"] as const).map((t) => (
+        <div className="flex gap-2 p-1 bg-slate-100 dark:bg-slate-800 rounded-lg overflow-x-auto">
+          {(["expense", "income", "transfer", "budget"] as const).map((t) => (
             <button
               key={t}
               type="button"
               onClick={() => setType(t)}
               className={cn(
-                "flex-1 py-2 text-sm font-medium rounded-md transition-all",
+                "flex-1 py-2 text-sm font-medium rounded-md transition-all whitespace-nowrap px-2",
                 type === t
                   ? "bg-white dark:bg-slate-700 text-cyan-600 dark:text-cyan-400 shadow-sm"
                   : "text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200"
@@ -103,7 +143,7 @@ export function AddTransactionModal({ isOpen, onClose }: AddTransactionModalProp
             />
           </div>
           
-          {type !== "transfer" && (
+          {type !== "transfer" && type !== "budget" && (
             <div>
               <label className="text-xs text-slate-500 dark:text-slate-400 mb-1 block">Category</label>
               <Select
@@ -118,18 +158,34 @@ export function AddTransactionModal({ isOpen, onClose }: AddTransactionModalProp
               </Select>
             </div>
           )}
+
+          {type === "budget" && (
+            <div>
+              <label className="text-xs text-slate-500 dark:text-slate-400 mb-1 block">Budget Goal</label>
+              <Select
+                value={budgetId}
+                onChange={(e) => setBudgetId(e.target.value)}
+              >
+                {state.budgets.map((b) => (
+                  <option key={b.id} value={b.id}>
+                    {b.name}
+                  </option>
+                ))}
+              </Select>
+            </div>
+          )}
         </div>
 
         <div className="grid grid-cols-2 gap-4">
           <div>
             <label className="text-xs text-slate-500 dark:text-slate-400 mb-1 block">
-              {type === "transfer" ? "From Account" : "Account"}
+              {type === "transfer" ? "From Account" : type === "budget" ? "Park From Account" : "Account"}
             </label>
             <Select
               value={accountId}
               onChange={(e) => setAccountId(e.target.value)}
             >
-              {state.accounts.map((a) => (
+              {(type === "budget" ? budgetAccounts : state.accounts).map((a) => (
                 <option key={a.id} value={a.id}>
                   {a.name}
                 </option>
@@ -167,7 +223,7 @@ export function AddTransactionModal({ isOpen, onClose }: AddTransactionModalProp
         </div>
 
         <Button type="submit" className="w-full mt-4" size="lg">
-          Save Transaction
+          {transaction ? "Update Transaction" : "Save Transaction"}
         </Button>
       </form>
     </Modal>

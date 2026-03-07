@@ -4,12 +4,13 @@ import { FinanceProvider } from "@/context/FinanceContext";
 import { ThemeProvider } from "@/context/ThemeContext";
 import { Layout } from "@/components/layout/Layout";
 import { Transactions } from "@/pages/Transactions";
-import { Setup } from "@/pages/Setup";
+import { Config } from "@/pages/Config";
 import { Analytics } from "@/pages/Analytics";
-import { AddTransactionModal } from "@/components/transactions/AddTransactionModal";
+import { Budget } from "@/pages/Budget";
+import { TransactionModal } from "@/components/transactions/TransactionModal";
 
 export default function App() {
-  const [activeTab, setActiveTab] = useState<"transactions" | "analytics" | "setup">("transactions");
+  const [activeTab, setActiveTab] = useState<"transactions" | "analytics" | "budget" | "config">("transactions");
   const [isAddTransactionModalOpen, setIsAddTransactionModalOpen] = useState(false);
 
   return (
@@ -23,10 +24,11 @@ export default function App() {
           >
             {activeTab === "transactions" && <Transactions />}
             {activeTab === "analytics" && <Analytics />}
-            {activeTab === "setup" && <Setup />}
+            {activeTab === "budget" && <Budget />}
+            {activeTab === "config" && <Config />}
           </Layout>
           
-          <AddTransactionModal 
+          <TransactionModal 
             isOpen={isAddTransactionModalOpen} 
             onClose={() => setIsAddTransactionModalOpen(false)} 
           />

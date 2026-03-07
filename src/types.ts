@@ -1,4 +1,4 @@
-export type TransactionType = "income" | "expense" | "transfer";
+export type TransactionType = "income" | "expense" | "transfer" | "budget";
 
 export interface Transaction {
   id: string;
@@ -8,6 +8,7 @@ export interface Transaction {
   categoryId?: string;
   accountId: string; // Source account
   toAccountId?: string; // Destination account (for transfers)
+  budgetId?: string; // Destination budget (for budget allocations)
   note?: string;
   createdAt: number;
 }
@@ -18,7 +19,10 @@ export interface Account {
   groupId: string;
   initialBalance: number;
   excludeFromTotals: boolean;
+  allowBudgeting?: boolean; // New field
   color?: string;
+  dueDate?: number; // Day of month (1-31)
+  cycleDate?: number; // Day of month (1-31)
 }
 
 export interface Group {
@@ -35,9 +39,18 @@ export interface Category {
   color?: string;
 }
 
+export interface Budget {
+  id: string;
+  name: string;
+  targetAmount: number;
+  color?: string;
+  createdAt: number;
+}
+
 export interface AppState {
   transactions: Transaction[];
   accounts: Account[];
   groups: Group[];
   categories: Category[];
+  budgets: Budget[];
 }

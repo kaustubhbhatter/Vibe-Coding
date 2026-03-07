@@ -1,6 +1,6 @@
 import React, { createContext, useContext, useReducer, useEffect, useRef } from "react";
 import { v4 as uuidv4 } from "uuid";
-import { AppState, Transaction, Account, Group, Category } from "@/types";
+import { AppState, Transaction, Account, Group, Category, Budget } from "@/types";
 import { useAuth } from "@/context/AuthContext";
 import { db } from "@/lib/firebase";
 import { doc, onSnapshot, setDoc } from "firebase/firestore";
@@ -11,6 +11,7 @@ const initialState: AppState = {
   accounts: [],
   groups: [],
   categories: [],
+  budgets: [],
 };
 
 type Action =
@@ -26,6 +27,9 @@ type Action =
   | { type: "ADD_CATEGORY"; payload: Category }
   | { type: "UPDATE_CATEGORY"; payload: Category }
   | { type: "DELETE_CATEGORY"; payload: string }
+  | { type: "ADD_BUDGET"; payload: Budget }
+  | { type: "UPDATE_BUDGET"; payload: Budget }
+  | { type: "DELETE_BUDGET"; payload: string }
   | { type: "LOAD_STATE"; payload: AppState }
   | { type: "RESET_STATE" };
 
@@ -87,8 +91,25 @@ function reducer(state: AppState, action: Action): AppState {
         ...state,
         categories: state.categories.filter((c) => c.id !== action.payload),
       };
+    case "ADD_BUDGET":
+      return { ...state, budgets: [...state.budgets, action.payload] };
+    case "UPDATE_BUDGET":
+      return {
+        ...state,
+        budgets: state.budgets.map((b) =>
+          b.id === action.payload.id ? action.payload : b
+        ),
+      };
+    case "DELETE_BUDGET":
+      return {
+        ...state,
+        budgets: state.budgets.filter((b) => b.id !== action.payload),
+      };
     case "LOAD_STATE":
-      return action.payload;
+      return {
+        ...action.payload,
+        budgets: action.payload.budgets || [], // Ensure budgets exists for migrated data
+      };
     case "RESET_STATE":
       return initialState;
     default:
@@ -111,6 +132,9 @@ const FinanceContext = createContext<{
   addCategory: (category: Omit<Category, "id">) => void;
   updateCategory: (category: Category) => void;
   deleteCategory: (id: string) => void;
+  addBudget: (budget: Omit<Budget, "id" | "createdAt">) => void;
+  updateBudget: (budget: Budget) => void;
+  deleteBudget: (id: string) => void;
 } | null>(null);
 
 const GUEST_STORAGE_KEY = "nebula_finance_guest_data";
@@ -120,6 +144,7 @@ export function FinanceProvider({ children }: { children: React.ReactNode }) {
   const [state, dispatch] = useReducer(reducer, initialState);
   const prevUser = useRef<User | null | undefined>(undefined);
   const isRemoteUpdate = useRef(false);
+  const dataLoadedForUser = useRef<string | null>(null);
 
   // Seed initial data for guests
   const seedInitialData = () => {
@@ -134,6 +159,7 @@ export function FinanceProvider({ children }: { children: React.ReactNode }) {
       initialBalance: 2500,
       excludeFromTotals: false,
       color: "cyan",
+      allowBudgeting: true,
     };
     
     const creditCard = {
@@ -163,6 +189,10 @@ export function FinanceProvider({ children }: { children: React.ReactNode }) {
       { id: uuidv4(), name: "Salary", type: "income" as const, color: "green" },
       { id: uuidv4(), name: "Investments", type: "income" as const, color: "indigo" },
       { id: uuidv4(), name: "Freelance", type: "income" as const, color: "teal" },
+    ];
+
+    const budgets = [
+      { id: uuidv4(), name: "Vacation Fund", targetAmount: 2000, color: "cyan", createdAt: Date.now() },
     ];
 
     // Generate some dummy transactions
@@ -246,6 +276,36 @@ export function FinanceProvider({ children }: { children: React.ReactNode }) {
         accounts: [checkingAccount, creditCard, cashAccount],
         groups: [bankGroup, creditGroup, cashGroup],
         categories: categories,
+        budgets: budgets,
+      },
+    });
+  };
+
+  // Seed structure only (no dummy data) for new authenticated users
+  const seedStructureOnly = () => {
+    const bankGroup = { id: uuidv4(), name: "Bank Accounts", type: "bank" as const };
+    const creditGroup = { id: uuidv4(), name: "Credit Cards", type: "credit" as const };
+    const cashGroup = { id: uuidv4(), name: "Cash", type: "cash" as const };
+
+    const categories = [
+      { id: uuidv4(), name: "Food & Dining", type: "expense" as const, color: "orange" },
+      { id: uuidv4(), name: "Transportation", type: "expense" as const, color: "blue" },
+      { id: uuidv4(), name: "Utilities", type: "expense" as const, color: "yellow" },
+      { id: uuidv4(), name: "Entertainment", type: "expense" as const, color: "purple" },
+      { id: uuidv4(), name: "Shopping", type: "expense" as const, color: "pink" },
+      { id: uuidv4(), name: "Salary", type: "income" as const, color: "green" },
+      { id: uuidv4(), name: "Investments", type: "income" as const, color: "indigo" },
+      { id: uuidv4(), name: "Freelance", type: "income" as const, color: "teal" },
+    ];
+
+    dispatch({
+      type: "LOAD_STATE",
+      payload: {
+        transactions: [],
+        accounts: [],
+        groups: [bankGroup, creditGroup, cashGroup],
+        categories: categories,
+        budgets: [],
       },
     });
   };
@@ -259,9 +319,11 @@ export function FinanceProvider({ children }: { children: React.ReactNode }) {
     if (user) {
       // LOGGED IN
       
-      // Clear guest data if we just logged in
-      localStorage.removeItem(GUEST_STORAGE_KEY);
-
+      // Clear current state immediately to remove guest data while real data loads
+      if (prevUser.current === null) {
+        dispatch({ type: "RESET_STATE" });
+      }
+      
       if (db) {
         const userDocRef = doc(db, "users", user.uid);
         unsubscribe = onSnapshot(userDocRef, (docSnap) => {
@@ -270,13 +332,21 @@ export function FinanceProvider({ children }: { children: React.ReactNode }) {
             isRemoteUpdate.current = true;
             dispatch({ type: "LOAD_STATE", payload: data });
           } else {
-             // No data for user yet. Reset to empty state.
-             dispatch({ type: "RESET_STATE" });
+             // No data for user yet. 
+             // User requested to remove local/dummy data on sign in.
+             // So we do NOT migrate guest data.
+             // Instead, we seed a clean structure.
+             seedStructureOnly();
           }
+          // Mark as loaded for this user to allow saving
+          dataLoadedForUser.current = user.uid;
+          // Always clear guest data on sign in to ensure no mix-up
+          localStorage.removeItem(GUEST_STORAGE_KEY);
         });
       }
     } else {
       // GUEST
+      dataLoadedForUser.current = null;
       
       // Check if we just logged out
       if (prevUser.current) {
@@ -318,17 +388,14 @@ export function FinanceProvider({ children }: { children: React.ReactNode }) {
     }
 
     if (user) {
-      // Save to Firestore
-      if (db) {
+      // Save to Firestore ONLY if we have successfully loaded the data for this user
+      // This prevents guest data from overwriting user data during the login transition
+      if (db && dataLoadedForUser.current === user.uid) {
         const userDocRef = doc(db, "users", user.uid);
         setDoc(userDocRef, state).catch(console.error);
       }
     } else {
       // Save to Local Storage (Guest)
-      // Only save if we have data (don't save empty state over valid data if something went wrong)
-      // But reducer initializes empty.
-      // seedInitialData populates it.
-      // So state should be valid.
       localStorage.setItem(GUEST_STORAGE_KEY, JSON.stringify(state));
     }
   }, [state, user, loading]);
@@ -384,6 +451,18 @@ export function FinanceProvider({ children }: { children: React.ReactNode }) {
     dispatch({ type: "DELETE_CATEGORY", payload: id });
   };
 
+  const addBudget = (budget: Omit<Budget, "id" | "createdAt">) => {
+    dispatch({ type: "ADD_BUDGET", payload: { ...budget, id: uuidv4(), createdAt: Date.now() } });
+  };
+
+  const updateBudget = (budget: Budget) => {
+    dispatch({ type: "UPDATE_BUDGET", payload: budget });
+  };
+
+  const deleteBudget = (id: string) => {
+    dispatch({ type: "DELETE_BUDGET", payload: id });
+  };
+
   return (
     <FinanceContext.Provider
       value={{
@@ -401,6 +480,9 @@ export function FinanceProvider({ children }: { children: React.ReactNode }) {
         addCategory,
         updateCategory,
         deleteCategory,
+        addBudget,
+        updateBudget,
+        deleteBudget,
       }}
     >
       {children}
