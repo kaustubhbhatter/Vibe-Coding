@@ -162,7 +162,7 @@ export function Config() {
   const selectedGroupType = state.groups.find(g => g.id === accGroup)?.type;
 
   return (
-    <div className="space-y-8 pb-24 md:pb-0">
+    <div className="space-y-8 pb-40 md:pb-16">
       {/* Net Worth Card */}
       <motion.div
         initial={{ opacity: 0, scale: 0.95 }}

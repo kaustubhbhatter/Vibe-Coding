@@ -23,7 +23,7 @@ export function Layout({ children, activeTab, onTabChange, onAddTransaction }: L
 
       {/* Main Content */}
       <main className="relative z-10 flex-1 h-screen overflow-y-auto scrollbar-hide transition-all duration-300">
-        <div className="max-w-5xl mx-auto p-4 md:p-8 pb-24 md:pb-8">
+        <div className="max-w-5xl mx-auto p-4 md:p-8 pb-40 md:pb-16">
           <AnimatePresence mode="wait">
             <motion.div
               key={activeTab}

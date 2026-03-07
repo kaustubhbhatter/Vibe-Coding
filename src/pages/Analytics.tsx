@@ -59,7 +59,7 @@ export function Analytics() {
   }, [state.transactions, timeRange]);
 
   return (
-    <div className="space-y-6 pb-24 md:pb-0">
+    <div className="space-y-6 pb-40 md:pb-16">
       <div className="flex justify-end space-x-2">
         {(["current", "last3", "last6"] as const).map(range => (
           <button

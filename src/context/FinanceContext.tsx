@@ -111,7 +111,13 @@ function reducer(state: AppState, action: Action): AppState {
         budgets: action.payload.budgets || [], // Ensure budgets exists for migrated data
       };
     case "RESET_STATE":
-      return initialState;
+      return {
+        transactions: [],
+        accounts: [],
+        groups: [],
+        categories: [],
+        budgets: [],
+      };
     default:
       return state;
   }
@@ -320,9 +326,12 @@ export function FinanceProvider({ children }: { children: React.ReactNode }) {
       // LOGGED IN
       
       // Clear current state immediately to remove guest data while real data loads
-      if (prevUser.current === null) {
-        dispatch({ type: "RESET_STATE" });
-      }
+      // This ensures no guest data is shown or saved to the user's profile
+      dispatch({ type: "RESET_STATE" });
+      dataLoadedForUser.current = null;
+      
+      // Clear all possible caches
+      localStorage.removeItem(GUEST_STORAGE_KEY);
       
       if (db) {
         const userDocRef = doc(db, "users", user.uid);
@@ -333,29 +342,24 @@ export function FinanceProvider({ children }: { children: React.ReactNode }) {
             dispatch({ type: "LOAD_STATE", payload: data });
           } else {
              // No data for user yet. 
-             // User requested to remove local/dummy data on sign in.
-             // So we do NOT migrate guest data.
-             // Instead, we seed a clean structure.
+             // Seed a clean structure (no dummy data).
              seedStructureOnly();
           }
           // Mark as loaded for this user to allow saving
           dataLoadedForUser.current = user.uid;
-          // Always clear guest data on sign in to ensure no mix-up
-          localStorage.removeItem(GUEST_STORAGE_KEY);
         });
       }
     } else {
       // GUEST
       dataLoadedForUser.current = null;
       
-      // Check if we just logged out
-      if (prevUser.current) {
-        // We were logged in, now logged out.
-        // Clear storage and seed defaults.
+      // If we just logged out, clear everything and seed defaults
+      if (prevUser.current !== undefined && prevUser.current !== null) {
         localStorage.removeItem(GUEST_STORAGE_KEY);
+        dispatch({ type: "RESET_STATE" });
         seedInitialData();
       } else {
-        // We were already guest (or first load)
+        // Normal guest load
         const storedData = localStorage.getItem(GUEST_STORAGE_KEY);
         if (storedData) {
           try {
@@ -366,7 +370,6 @@ export function FinanceProvider({ children }: { children: React.ReactNode }) {
             seedInitialData();
           }
         } else {
-          // First load as guest
           seedInitialData();
         }
       }

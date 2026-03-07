@@ -110,7 +110,7 @@ export function Transactions() {
   const activeFilterCount = (filterType !== "all" ? 1 : 0) + selectedCategories.length + selectedAccounts.length;
 
   return (
-    <div className="space-y-6 pb-24 md:pb-0">
+    <div className="space-y-6 pb-40 md:pb-16">
       {/* Monthly Summary Card */}
       <motion.div
         initial={{ opacity: 0, y: 20 }}

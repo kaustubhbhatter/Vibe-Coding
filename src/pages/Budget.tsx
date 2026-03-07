@@ -53,7 +53,7 @@ export function Budget() {
   };
 
   return (
-    <div className="space-y-6 pb-24 md:pb-0">
+    <div className="space-y-6 pb-40 md:pb-16">
       <div className="flex items-center justify-between">
         <h1 className="text-2xl font-bold text-slate-900 dark:text-white">Budgets</h1>
         <Button onClick={() => setIsAddModalOpen(true)}>
