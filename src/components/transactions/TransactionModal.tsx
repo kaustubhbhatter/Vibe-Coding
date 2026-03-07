@@ -23,7 +23,7 @@ export function TransactionModal({ isOpen, onClose, transaction, initialData }: 
   const [accountId, setAccountId] = useState("");
   const [toAccountId, setToAccountId] = useState("");
   const [budgetId, setBudgetId] = useState("");
-  const [date, setDate] = useState(format(new Date(), "yyyy-MM-dd'T'HH:mm"));
+  const [date, setDate] = useState(format(new Date(), "yyyy-MM-dd"));
   const [note, setNote] = useState("");
 
   useEffect(() => {
@@ -36,13 +36,13 @@ export function TransactionModal({ isOpen, onClose, transaction, initialData }: 
         setAccountId(transaction.accountId);
         setToAccountId(transaction.toAccountId || "");
         setBudgetId(transaction.budgetId || "");
-        setDate(format(new Date(transaction.date), "yyyy-MM-dd'T'HH:mm"));
+        setDate(format(new Date(transaction.date), "yyyy-MM-dd"));
         setNote(transaction.note || "");
       } else {
         // Add Mode - Reset form or set defaults
         setAmount(initialData?.amount?.toString() || "");
         setNote(initialData?.note || "");
-        setDate(initialData?.date ? format(new Date(initialData.date), "yyyy-MM-dd'T'HH:mm") : format(new Date(), "yyyy-MM-dd'T'HH:mm"));
+        setDate(initialData?.date ? format(new Date(initialData.date), "yyyy-MM-dd") : format(new Date(), "yyyy-MM-dd"));
         setType(initialData?.type || "expense");
         
         if (state.accounts.length > 0) {
@@ -97,7 +97,8 @@ export function TransactionModal({ isOpen, onClose, transaction, initialData }: 
   };
 
   const filteredCategories = state.categories.filter((c) => c.type === type);
-  const budgetAccounts = state.accounts.filter(a => a.allowBudgeting);
+  const availableAccounts = state.accounts.filter(a => !a.excludeFromTotals);
+  const budgetAccounts = availableAccounts.filter(a => a.allowBudgeting);
 
   return (
     <Modal isOpen={isOpen} onClose={onClose} title={transaction ? "Edit Transaction" : "Add Transaction"}>
@@ -137,7 +138,7 @@ export function TransactionModal({ isOpen, onClose, transaction, initialData }: 
           <div>
             <label className="text-xs text-slate-500 dark:text-slate-400 mb-1 block">Date</label>
             <Input
-              type="datetime-local"
+              type="date"
               value={date}
               onChange={(e) => setDate(e.target.value)}
             />
@@ -185,7 +186,7 @@ export function TransactionModal({ isOpen, onClose, transaction, initialData }: 
               value={accountId}
               onChange={(e) => setAccountId(e.target.value)}
             >
-              {(type === "budget" ? budgetAccounts : state.accounts).map((a) => (
+              {(type === "budget" ? budgetAccounts : availableAccounts).map((a) => (
                 <option key={a.id} value={a.id}>
                   {a.name}
                 </option>
@@ -201,7 +202,7 @@ export function TransactionModal({ isOpen, onClose, transaction, initialData }: 
                 onChange={(e) => setToAccountId(e.target.value)}
               >
                 <option value="">Select Account</option>
-                {state.accounts
+                {availableAccounts
                   .filter((a) => a.id !== accountId)
                   .map((a) => (
                     <option key={a.id} value={a.id}>

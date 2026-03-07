@@ -8,7 +8,7 @@ import { Input } from "@/components/ui/Input";
 import { Select } from "@/components/ui/Select";
 import { Modal } from "@/components/ui/Modal";
 import { formatCurrency, cn } from "@/lib/utils";
-import { Plus, Trash2, Edit2, Wallet, CreditCard, Landmark, LogIn, LogOut, Sun, Moon, User as UserIcon } from "lucide-react";
+import { Plus, Trash2, Edit2, Wallet, CreditCard, Landmark, LogIn, LogOut, Sun, Moon, User as UserIcon, TrendingUp } from "lucide-react";
 import { motion } from "framer-motion";
 import { Account, Group, Category } from "@/types";
 import { TransactionModal } from "@/components/transactions/TransactionModal";
@@ -28,6 +28,7 @@ export function Config() {
   const [accBalance, setAccBalance] = useState("");
   const [accColor, setAccColor] = useState("cyan");
   const [accAllowBudgeting, setAccAllowBudgeting] = useState(false);
+  const [accExcludeFromTotals, setAccExcludeFromTotals] = useState(false);
   const [accDueDate, setAccDueDate] = useState("");
   const [accCycleDate, setAccCycleDate] = useState("");
 
@@ -98,6 +99,7 @@ export function Config() {
       initialBalance: parseFloat(accBalance),
       color: accColor,
       allowBudgeting: accAllowBudgeting,
+      excludeFromTotals: accExcludeFromTotals,
       dueDate: accDueDate ? parseInt(accDueDate) : undefined,
       cycleDate: accCycleDate ? parseInt(accCycleDate) : undefined,
     };
@@ -105,13 +107,14 @@ export function Config() {
     if (editingAccount) {
       updateAccount({ ...editingAccount, ...accountData });
     } else {
-      addAccount({ ...accountData, excludeFromTotals: false });
+      addAccount(accountData);
     }
     setIsAccountModalOpen(false);
     setEditingAccount(null);
     setAccName("");
     setAccBalance("");
     setAccAllowBudgeting(false);
+    setAccExcludeFromTotals(false);
     setAccDueDate("");
     setAccCycleDate("");
   };
@@ -128,6 +131,7 @@ export function Config() {
     setAccName("");
     setAccBalance("0");
     setAccAllowBudgeting(false);
+    setAccExcludeFromTotals(false);
     setAccDueDate("");
     setAccCycleDate("");
     if (state.groups.length > 0) setAccGroup(state.groups[0].id);
@@ -141,6 +145,7 @@ export function Config() {
     setAccGroup(account.groupId);
     setAccColor(account.color || "cyan");
     setAccAllowBudgeting(account.allowBudgeting || false);
+    setAccExcludeFromTotals(account.excludeFromTotals || false);
     setAccDueDate(account.dueDate?.toString() || "");
     setAccCycleDate(account.cycleDate?.toString() || "");
     setIsAccountModalOpen(true);
@@ -204,76 +209,81 @@ export function Config() {
           </Button>
         </div>
 
-        {state.groups.map(group => (
-          <div key={group.id} className="space-y-2">
-            <h3 className="text-xs font-medium text-slate-500 dark:text-slate-400 uppercase px-2">{group.name}</h3>
-            {state.accounts.filter(a => a.groupId === group.id).map(account => {
-               const balance = getAccountBalance(account.id, account.initialBalance);
-               const overdue = group.type === 'credit' && isOverdue(account, balance);
-               
-               return (
-                <motion.div
-                  key={account.id}
-                  layout
-                  className={cn(
-                    "flex items-center justify-between p-4 rounded-xl border shadow-sm transition-colors",
-                    overdue 
-                      ? "bg-rose-50 dark:bg-rose-900/10 border-rose-200 dark:border-rose-800" 
-                      : "bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800 hover:border-cyan-200 dark:hover:border-cyan-700"
-                  )}
-                >
-                  <div className="flex items-center gap-3">
-                    <div className={cn(
-                      "w-10 h-10 rounded-full flex items-center justify-center",
-                      `bg-${account?.color || 'cyan'}-100 dark:bg-${account?.color || 'cyan'}-900/30 text-${account?.color || 'cyan'}-600 dark:text-${account?.color || 'cyan'}-400`
-                    )}>
-                      {group.type === 'bank' ? <Landmark size={18} /> : group.type === 'credit' ? <CreditCard size={18} /> : <Wallet size={18} />}
-                    </div>
-                    <div>
-                      <p className={cn("font-medium", overdue ? "text-rose-700 dark:text-rose-300" : "text-slate-900 dark:text-slate-200")}>
-                        {account.name}
-                      </p>
-                      <div className="flex flex-col sm:flex-row sm:items-center sm:gap-2">
-                        <p className="text-xs text-slate-500 dark:text-slate-400">
-                          {group.type === 'credit' ? 'Limit/Due: ' : 'Balance: '} 
-                          <span className="font-mono text-slate-700 dark:text-slate-300">{formatCurrency(balance)}</span>
+        {state.groups.map(group => {
+          const groupAccounts = state.accounts.filter(a => a.groupId === group.id);
+          if (groupAccounts.length === 0) return null;
+
+          return (
+            <div key={group.id} className="space-y-2">
+              <h3 className="text-xs font-medium text-slate-500 dark:text-slate-400 uppercase px-2">{group.name}</h3>
+              {groupAccounts.map(account => {
+                 const balance = getAccountBalance(account.id, account.initialBalance);
+                 const overdue = group.type === 'credit' && isOverdue(account, balance);
+                 
+                 return (
+                  <motion.div
+                    key={account.id}
+                    layout
+                    className={cn(
+                      "flex items-center justify-between p-4 rounded-xl border shadow-sm transition-colors",
+                      overdue 
+                        ? "bg-rose-50 dark:bg-rose-900/10 border-rose-200 dark:border-rose-800" 
+                        : "bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800 hover:border-cyan-200 dark:hover:border-cyan-700"
+                    )}
+                  >
+                    <div className="flex items-center gap-3">
+                      <div className={cn(
+                        "w-10 h-10 rounded-full flex items-center justify-center",
+                        `bg-${account?.color || 'cyan'}-100 dark:bg-${account?.color || 'cyan'}-900/30 text-${account?.color || 'cyan'}-600 dark:text-${account?.color || 'cyan'}-400`
+                      )}>
+                        {group.type === 'bank' ? <Landmark size={18} /> : group.type === 'credit' ? <CreditCard size={18} /> : group.type === 'investment' ? <TrendingUp size={18} /> : <Wallet size={18} />}
+                      </div>
+                      <div>
+                        <p className={cn("font-medium", overdue ? "text-rose-700 dark:text-rose-300" : "text-slate-900 dark:text-slate-200")}>
+                          {account.name}
                         </p>
-                        {getAccountReservedBalance(account.id) > 0 && (
-                          <span className="text-xs text-cyan-600 dark:text-cyan-400">
-                            (Reserved: {formatCurrency(getAccountReservedBalance(account.id))})
-                          </span>
-                        )}
-                        {group.type === 'credit' && account.dueDate && (
-                          <span className={cn("text-xs", overdue ? "text-rose-600 font-medium" : "text-slate-400")}>
-                            Due: {account.dueDate}th
-                          </span>
-                        )}
+                        <div className="flex flex-col sm:flex-row sm:items-center sm:gap-2">
+                          <p className="text-xs text-slate-500 dark:text-slate-400">
+                            {group.type === 'credit' ? 'Limit/Due: ' : 'Balance: '} 
+                            <span className="font-mono text-slate-700 dark:text-slate-300">{formatCurrency(balance)}</span>
+                          </p>
+                          {getAccountReservedBalance(account.id) > 0 && (
+                            <span className="text-xs text-cyan-600 dark:text-cyan-400">
+                              (Reserved: {formatCurrency(getAccountReservedBalance(account.id))})
+                            </span>
+                          )}
+                          {group.type === 'credit' && account.dueDate && (
+                            <span className={cn("text-xs", overdue ? "text-rose-600 font-medium" : "text-slate-400")}>
+                              Due: {account.dueDate}th
+                            </span>
+                          )}
+                        </div>
                       </div>
                     </div>
-                  </div>
-                  <div className="flex items-center gap-1">
-                    {group.type === 'credit' && balance < 0 && (
-                      <Button 
-                        size="sm" 
-                        variant="outline" 
-                        className="mr-2 h-8 text-xs bg-emerald-50 text-emerald-600 border-emerald-200 hover:bg-emerald-100 dark:bg-emerald-900/20 dark:text-emerald-400 dark:border-emerald-800"
-                        onClick={() => handlePayCreditCard(account)}
-                      >
-                        Pay
+                    <div className="flex items-center gap-1">
+                      {group.type === 'credit' && balance < 0 && (
+                        <Button 
+                          size="sm" 
+                          variant="outline" 
+                          className="mr-2 h-8 text-xs bg-emerald-50 text-emerald-600 border-emerald-200 hover:bg-emerald-100 dark:bg-emerald-900/20 dark:text-emerald-400 dark:border-emerald-800"
+                          onClick={() => handlePayCreditCard(account)}
+                        >
+                          Pay
+                        </Button>
+                      )}
+                      <Button variant="ghost" size="icon" onClick={() => openEditAccount(account)} className="h-8 w-8">
+                        <Edit2 size={14} className="text-slate-400 hover:text-cyan-500" />
                       </Button>
-                    )}
-                    <Button variant="ghost" size="icon" onClick={() => openEditAccount(account)} className="h-8 w-8">
-                      <Edit2 size={14} className="text-slate-400 hover:text-cyan-500" />
-                    </Button>
-                    <Button variant="ghost" size="icon" onClick={() => deleteAccount(account.id)} className="h-8 w-8">
-                      <Trash2 size={14} className="text-slate-400 hover:text-rose-500" />
-                    </Button>
-                  </div>
-                </motion.div>
-              );
-            })}
-          </div>
-        ))}
+                      <Button variant="ghost" size="icon" onClick={() => deleteAccount(account.id)} className="h-8 w-8">
+                        <Trash2 size={14} className="text-slate-400 hover:text-rose-500" />
+                      </Button>
+                    </div>
+                  </motion.div>
+                );
+              })}
+            </div>
+          );
+        })}
       </div>
 
       {/* Categories Section */}
@@ -437,6 +447,16 @@ export function Config() {
               className="rounded border-slate-300 text-cyan-600 focus:ring-cyan-500"
             />
             <label htmlFor="allowBudgeting" className="text-sm text-slate-700 dark:text-slate-300">Enable Budgeting</label>
+          </div>
+          <div className="flex items-center gap-2">
+            <input 
+              type="checkbox" 
+              id="excludeFromTotals" 
+              checked={accExcludeFromTotals} 
+              onChange={e => setAccExcludeFromTotals(e.target.checked)}
+              className="rounded border-slate-300 text-cyan-600 focus:ring-cyan-500"
+            />
+            <label htmlFor="excludeFromTotals" className="text-sm text-slate-700 dark:text-slate-300">Not include in total</label>
           </div>
           <Button type="submit" className="w-full">Save Account</Button>
         </form>

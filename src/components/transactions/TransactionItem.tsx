@@ -81,7 +81,7 @@ export const TransactionItem: React.FC<TransactionItemProps> = ({
       </div>
       
       <div className="flex items-center gap-2">
-        <div className="text-right">
+        <div className="text-right flex flex-col justify-center">
           <p
             className={cn(
               "font-mono font-medium text-sm",
@@ -96,9 +96,6 @@ export const TransactionItem: React.FC<TransactionItemProps> = ({
           >
             {isTransfer ? "" : isIncome ? "+" : isBudget ? "" : "-"}
             {formatCurrency(transaction.amount)}
-          </p>
-          <p className="text-[10px] text-slate-400 dark:text-slate-500">
-            {format(new Date(transaction.date), "h:mm a")}
           </p>
         </div>
 

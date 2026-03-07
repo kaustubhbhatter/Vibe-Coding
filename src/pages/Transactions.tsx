@@ -88,9 +88,8 @@ export function Transactions() {
   };
 
   const handleDelete = (id: string) => {
-    if (window.confirm("Are you sure you want to delete this transaction?")) {
-      deleteTransaction(id);
-    }
+    // window.confirm is blocked in iframes, so we delete directly for now
+    deleteTransaction(id);
   };
 
   const toggleCategory = (id: string) => {

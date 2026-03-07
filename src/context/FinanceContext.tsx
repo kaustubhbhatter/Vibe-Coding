@@ -5,6 +5,7 @@ import { useAuth } from "@/context/AuthContext";
 import { db } from "@/lib/firebase";
 import { doc, onSnapshot, setDoc } from "firebase/firestore";
 import { User } from "firebase/auth";
+import { removeUndefined } from "@/lib/utils";
 
 const initialState: AppState = {
   transactions: [],
@@ -106,8 +107,21 @@ function reducer(state: AppState, action: Action): AppState {
         budgets: state.budgets.filter((b) => b.id !== action.payload),
       };
     case "LOAD_STATE":
+      const loadedGroups = action.payload.groups || [];
+      const hasShortTerm = loadedGroups.some(g => g.name === "Short Investments");
+      const hasLongTerm = loadedGroups.some(g => g.name === "Long Investments");
+      
+      const migratedGroups = [...loadedGroups];
+      if (!hasShortTerm) {
+        migratedGroups.push({ id: "group-short-invest", name: "Short Investments", type: "investment" });
+      }
+      if (!hasLongTerm) {
+        migratedGroups.push({ id: "group-long-invest", name: "Long Investments", type: "investment" });
+      }
+
       return {
         ...action.payload,
+        groups: migratedGroups,
         budgets: action.payload.budgets || [], // Ensure budgets exists for migrated data
       };
     case "RESET_STATE":
@@ -155,143 +169,10 @@ export function FinanceProvider({ children }: { children: React.ReactNode }) {
   // Seed initial data for guests
   const seedInitialData = () => {
     const bankGroup = { id: uuidv4(), name: "Bank Accounts", type: "bank" as const };
-    const creditGroup = { id: uuidv4(), name: "Credit Cards", type: "credit" as const };
     const cashGroup = { id: uuidv4(), name: "Cash", type: "cash" as const };
-
-    const checkingAccount = {
-      id: uuidv4(),
-      name: "Checking",
-      groupId: bankGroup.id,
-      initialBalance: 2500,
-      excludeFromTotals: false,
-      color: "cyan",
-      allowBudgeting: true,
-    };
-    
-    const creditCard = {
-      id: uuidv4(),
-      name: "Primary Card",
-      groupId: creditGroup.id,
-      initialBalance: -450,
-      excludeFromTotals: false,
-      color: "fuchsia",
-    };
-
-    const cashAccount = {
-      id: uuidv4(),
-      name: "Wallet",
-      groupId: cashGroup.id,
-      initialBalance: 120,
-      excludeFromTotals: false,
-      color: "emerald",
-    };
-
-    const categories = [
-      { id: uuidv4(), name: "Food & Dining", type: "expense" as const, color: "orange" },
-      { id: uuidv4(), name: "Transportation", type: "expense" as const, color: "blue" },
-      { id: uuidv4(), name: "Utilities", type: "expense" as const, color: "yellow" },
-      { id: uuidv4(), name: "Entertainment", type: "expense" as const, color: "purple" },
-      { id: uuidv4(), name: "Shopping", type: "expense" as const, color: "pink" },
-      { id: uuidv4(), name: "Salary", type: "income" as const, color: "green" },
-      { id: uuidv4(), name: "Investments", type: "income" as const, color: "indigo" },
-      { id: uuidv4(), name: "Freelance", type: "income" as const, color: "teal" },
-    ];
-
-    const budgets = [
-      { id: uuidv4(), name: "Vacation Fund", targetAmount: 2000, color: "cyan", createdAt: Date.now() },
-    ];
-
-    // Generate some dummy transactions
-    const transactions: Transaction[] = [
-      {
-        id: uuidv4(),
-        amount: 3200,
-        type: "income",
-        categoryId: categories[5].id, // Salary
-        accountId: checkingAccount.id,
-        date: new Date().toISOString(),
-        note: "Monthly Salary",
-        createdAt: Date.now(),
-      },
-      {
-        id: uuidv4(),
-        amount: 45,
-        type: "expense",
-        categoryId: categories[0].id, // Food
-        accountId: creditCard.id,
-        date: new Date(Date.now() - 86400000 * 1).toISOString(), // Yesterday
-        note: "Grocery Store",
-        createdAt: Date.now() - 86400000 * 1,
-      },
-      {
-        id: uuidv4(),
-        amount: 120,
-        type: "expense",
-        categoryId: categories[2].id, // Utilities
-        accountId: checkingAccount.id,
-        date: new Date(Date.now() - 86400000 * 2).toISOString(),
-        note: "Electric Bill",
-        createdAt: Date.now() - 86400000 * 2,
-      },
-      {
-        id: uuidv4(),
-        amount: 15,
-        type: "expense",
-        categoryId: categories[1].id, // Transportation
-        accountId: cashAccount.id,
-        date: new Date(Date.now() - 86400000 * 3).toISOString(),
-        note: "Uber Ride",
-        createdAt: Date.now() - 86400000 * 3,
-      },
-      {
-        id: uuidv4(),
-        amount: 85,
-        type: "expense",
-        categoryId: categories[3].id, // Entertainment
-        accountId: creditCard.id,
-        date: new Date(Date.now() - 86400000 * 4).toISOString(),
-        note: "Movie Night",
-        createdAt: Date.now() - 86400000 * 4,
-      },
-      {
-        id: uuidv4(),
-        amount: 250,
-        type: "income",
-        categoryId: categories[7].id, // Freelance
-        accountId: checkingAccount.id,
-        date: new Date(Date.now() - 86400000 * 5).toISOString(),
-        note: "Freelance Project",
-        createdAt: Date.now() - 86400000 * 5,
-      },
-      {
-        id: uuidv4(),
-        amount: 120,
-        type: "expense",
-        categoryId: categories[4].id, // Shopping
-        accountId: creditCard.id,
-        date: new Date(Date.now() - 86400000 * 6).toISOString(),
-        note: "New Sneakers",
-        createdAt: Date.now() - 86400000 * 6,
-      },
-    ];
-
-    dispatch({
-      type: "LOAD_STATE",
-      payload: {
-        transactions: transactions,
-        accounts: [checkingAccount, creditCard, cashAccount],
-        groups: [bankGroup, creditGroup, cashGroup],
-        categories: categories,
-        budgets: budgets,
-      },
-    });
-  };
-
-  // Seed structure only (no dummy data) for new authenticated users
-  const seedStructureOnly = () => {
-    const bankGroup = { id: uuidv4(), name: "Bank Accounts", type: "bank" as const };
+    const shortInvestmentGroup = { id: uuidv4(), name: "Short Investments", type: "investment" as const };
+    const longInvestmentGroup = { id: uuidv4(), name: "Long Investments", type: "investment" as const };
     const creditGroup = { id: uuidv4(), name: "Credit Cards", type: "credit" as const };
-    const cashGroup = { id: uuidv4(), name: "Cash", type: "cash" as const };
 
     const categories = [
       { id: uuidv4(), name: "Food & Dining", type: "expense" as const, color: "orange" },
@@ -309,7 +190,38 @@ export function FinanceProvider({ children }: { children: React.ReactNode }) {
       payload: {
         transactions: [],
         accounts: [],
-        groups: [bankGroup, creditGroup, cashGroup],
+        groups: [bankGroup, cashGroup, shortInvestmentGroup, longInvestmentGroup, creditGroup],
+        categories: categories,
+        budgets: [],
+      },
+    });
+  };
+
+  // Seed structure only (no dummy data) for new authenticated users
+  const seedStructureOnly = () => {
+    const bankGroup = { id: uuidv4(), name: "Bank Accounts", type: "bank" as const };
+    const cashGroup = { id: uuidv4(), name: "Cash", type: "cash" as const };
+    const shortInvestmentGroup = { id: uuidv4(), name: "Short Investments", type: "investment" as const };
+    const longInvestmentGroup = { id: uuidv4(), name: "Long Investments", type: "investment" as const };
+    const creditGroup = { id: uuidv4(), name: "Credit Cards", type: "credit" as const };
+
+    const categories = [
+      { id: uuidv4(), name: "Food & Dining", type: "expense" as const, color: "orange" },
+      { id: uuidv4(), name: "Transportation", type: "expense" as const, color: "blue" },
+      { id: uuidv4(), name: "Utilities", type: "expense" as const, color: "yellow" },
+      { id: uuidv4(), name: "Entertainment", type: "expense" as const, color: "purple" },
+      { id: uuidv4(), name: "Shopping", type: "expense" as const, color: "pink" },
+      { id: uuidv4(), name: "Salary", type: "income" as const, color: "green" },
+      { id: uuidv4(), name: "Investments", type: "income" as const, color: "indigo" },
+      { id: uuidv4(), name: "Freelance", type: "income" as const, color: "teal" },
+    ];
+
+    dispatch({
+      type: "LOAD_STATE",
+      payload: {
+        transactions: [],
+        accounts: [],
+        groups: [bankGroup, cashGroup, shortInvestmentGroup, longInvestmentGroup, creditGroup],
         categories: categories,
         budgets: [],
       },
@@ -330,7 +242,7 @@ export function FinanceProvider({ children }: { children: React.ReactNode }) {
       dispatch({ type: "RESET_STATE" });
       dataLoadedForUser.current = null;
       
-      // Clear all possible caches
+      // Clear guest storage immediately on login
       localStorage.removeItem(GUEST_STORAGE_KEY);
       
       if (db) {
@@ -393,12 +305,13 @@ export function FinanceProvider({ children }: { children: React.ReactNode }) {
     if (user) {
       // Save to Firestore ONLY if we have successfully loaded the data for this user
       // This prevents guest data from overwriting user data during the login transition
-      if (db && dataLoadedForUser.current === user.uid) {
+      if (db && dataLoadedForUser.current === user.uid && !isRemoteUpdate.current) {
         const userDocRef = doc(db, "users", user.uid);
-        setDoc(userDocRef, state).catch(console.error);
+        const sanitizedState = removeUndefined(state);
+        setDoc(userDocRef, sanitizedState).catch(console.error);
       }
-    } else {
-      // Save to Local Storage (Guest)
+    } else if (prevUser.current === null) {
+      // Save to Local Storage (Guest) ONLY if we are not in a login transition
       localStorage.setItem(GUEST_STORAGE_KEY, JSON.stringify(state));
     }
   }, [state, user, loading]);
