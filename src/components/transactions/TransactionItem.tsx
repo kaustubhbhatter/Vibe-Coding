@@ -1,5 +1,4 @@
 import React from "react";
-import { format } from "date-fns";
 import { ArrowRightLeft, TrendingDown, TrendingUp, Edit2, Trash2, Target } from "lucide-react";
 import { Transaction, Category, Account, Budget } from "@/types";
 import { cn, formatCurrency } from "@/lib/utils";

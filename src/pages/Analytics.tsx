@@ -45,7 +45,7 @@ export function Analytics() {
 
     return days.map(day => {
       const dateStr = format(day, "yyyy-MM-dd");
-      const dayTransactions = state.transactions.filter(t => t.date.startsWith(dateStr));
+      const dayTransactions = state.transactions.filter(t => t.date && t.date.startsWith(dateStr));
       
       const income = dayTransactions.filter(t => t.type === 'income').reduce((acc, t) => acc + t.amount, 0);
       const expense = dayTransactions.filter(t => t.type === 'expense').reduce((acc, t) => acc + t.amount, 0);

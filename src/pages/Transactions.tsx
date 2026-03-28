@@ -40,16 +40,29 @@ export function Transactions() {
     }
 
     return filtered.sort((a, b) => {
-      const dateA = new Date(a.date).getTime();
-      const dateB = new Date(b.date).getTime();
-      return sortOrder === "desc" ? dateB - dateA : dateA - dateB;
+      const dateA = a.date ? new Date(a.date).getTime() : 0;
+      const dateB = b.date ? new Date(b.date).getTime() : 0;
+      const validDateA = isNaN(dateA) ? 0 : dateA;
+      const validDateB = isNaN(dateB) ? 0 : dateB;
+      return sortOrder === "desc" ? validDateB - validDateA : validDateA - validDateB;
     });
   }, [state.transactions, filterType, sortOrder, selectedCategories, selectedAccounts]);
 
   const groupedTransactions = useMemo<{ [key: string]: Transaction[] }>(() => {
     const groups: { [key: string]: Transaction[] } = {};
     transactions.forEach((t) => {
-      const dateKey = format(parseISO(t.date), "yyyy-MM-dd");
+      let dateKey = "Unknown Date";
+      try {
+        if (t.date) {
+          const parsedDate = parseISO(t.date);
+          if (!isNaN(parsedDate.getTime())) {
+            dateKey = format(parsedDate, "yyyy-MM-dd");
+          }
+        }
+      } catch (e) {
+        console.error("Invalid date for transaction", t);
+      }
+      
       if (!groups[dateKey]) {
         groups[dateKey] = [];
       }
@@ -63,9 +76,12 @@ export function Transactions() {
     const start = startOfMonth(now);
     const end = endOfMonth(now);
 
-    const currentMonthTransactions = state.transactions.filter((t) =>
-      isWithinInterval(parseISO(t.date), { start, end })
-    );
+    const currentMonthTransactions = state.transactions.filter((t) => {
+      if (!t.date) return false;
+      const parsedDate = parseISO(t.date);
+      if (isNaN(parsedDate.getTime())) return false;
+      return isWithinInterval(parsedDate, { start, end });
+    });
 
     const income = currentMonthTransactions
       .filter((t) => t.type === "income")
@@ -282,7 +298,7 @@ export function Transactions() {
             >
               <div className="flex items-center justify-between px-2 mb-2">
                 <h3 className="text-sm font-medium text-slate-500 dark:text-slate-400">
-                  {format(parseISO(date), "EEE, MMM d")}
+                  {date === "Unknown Date" ? "Unknown Date" : format(parseISO(date), "EEE, MMM d")}
                 </h3>
                 <div className="text-xs text-slate-500 dark:text-slate-400 flex gap-2">
                   {dayIncome > 0 && <span className="text-emerald-600 dark:text-emerald-400">+{formatCurrency(dayIncome)}</span>}

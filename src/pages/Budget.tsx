@@ -6,13 +6,17 @@ import { Input } from "@/components/ui/Input";
 import { Modal } from "@/components/ui/Modal";
 import { formatCurrency, cn } from "@/lib/utils";
 import { motion, AnimatePresence } from "framer-motion";
-import { Plus, Target, Trash2, Wallet } from "lucide-react";
-import { Budget as BudgetType } from "@/types";
+import { Plus, Target, Trash2, Wallet, Edit2 } from "lucide-react";
+import { Budget as BudgetType, Transaction } from "@/types";
+import { TransactionModal } from "@/components/transactions/TransactionModal";
 
 export function Budget() {
-  const { state, addBudget, deleteBudget } = useFinance();
+  const { state, addBudget, deleteBudget, deleteTransaction } = useFinance();
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [selectedBudget, setSelectedBudget] = useState<BudgetType | null>(null);
+  
+  const [editingTransaction, setEditingTransaction] = useState<Transaction | null>(null);
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
 
   // Form State
   const [name, setName] = useState("");
@@ -38,18 +42,8 @@ export function Budget() {
     return currentAmount;
   };
 
-  const getBudgetAllocations = (budgetId: string) => {
-    const transactions = state.transactions.filter(t => t.type === 'budget' && t.budgetId === budgetId);
-    const allocations: { [accountId: string]: number } = {};
-    
-    transactions.forEach(t => {
-      allocations[t.accountId] = (allocations[t.accountId] || 0) + t.amount;
-    });
-
-    return Object.entries(allocations).map(([accountId, amount]) => ({
-      account: state.accounts.find(a => a.id === accountId),
-      amount
-    })).filter(item => item.amount > 0);
+  const getBudgetTransactions = (budgetId: string) => {
+    return state.transactions.filter(t => t.type === 'budget' && t.budgetId === budgetId);
   };
 
   return (
@@ -165,18 +159,43 @@ export function Budget() {
               <h3 className="text-sm font-medium text-slate-700 dark:text-slate-300 border-b border-slate-200 dark:border-slate-800 pb-2">
                 Funds Parked In
               </h3>
-              {getBudgetAllocations(selectedBudget.id).length > 0 ? (
-                getBudgetAllocations(selectedBudget.id).map(({ account, amount }) => (
-                  <div key={account?.id} className="flex items-center justify-between p-3 bg-slate-50 dark:bg-slate-800/50 rounded-lg">
+              {getBudgetTransactions(selectedBudget.id).length > 0 ? (
+                getBudgetTransactions(selectedBudget.id).map((t) => {
+                  const account = state.accounts.find(a => a.id === t.accountId);
+                  return (
+                  <div key={t.id} className="flex items-center justify-between p-3 bg-slate-50 dark:bg-slate-800/50 rounded-lg group">
                     <div className="flex items-center gap-3">
                       <div className={`p-2 rounded-full bg-${account?.color || 'slate'}-100 dark:bg-${account?.color || 'slate'}-900/30 text-${account?.color || 'slate'}-600 dark:text-${account?.color || 'slate'}-400`}>
                         <Wallet size={16} />
                       </div>
                       <span className="text-sm font-medium text-slate-700 dark:text-slate-300">{account?.name}</span>
                     </div>
-                    <span className="font-mono text-slate-700 dark:text-slate-300">{formatCurrency(amount)}</span>
+                    <div className="flex items-center gap-3">
+                      <span className="font-mono text-slate-700 dark:text-slate-300">{formatCurrency(t.amount)}</span>
+                      <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                        <Button
+                          size="icon"
+                          variant="ghost"
+                          className="h-7 w-7 text-slate-400 hover:text-cyan-500 hover:bg-cyan-50 dark:hover:bg-cyan-900/20"
+                          onClick={() => {
+                            setEditingTransaction(t);
+                            setIsEditModalOpen(true);
+                          }}
+                        >
+                          <Edit2 size={14} />
+                        </Button>
+                        <Button
+                          size="icon"
+                          variant="ghost"
+                          className="h-7 w-7 text-slate-400 hover:text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-900/20"
+                          onClick={() => deleteTransaction(t.id)}
+                        >
+                          <Trash2 size={14} />
+                        </Button>
+                      </div>
+                    </div>
                   </div>
-                ))
+                )})
               ) : (
                 <p className="text-sm text-slate-500 dark:text-slate-400 italic text-center py-4">
                   No funds allocated yet.
@@ -199,6 +218,15 @@ export function Budget() {
           </div>
         )}
       </Modal>
+
+      <TransactionModal
+        isOpen={isEditModalOpen}
+        onClose={() => {
+          setIsEditModalOpen(false);
+          setEditingTransaction(null);
+        }}
+        transaction={editingTransaction}
+      />
     </div>
   );
 }

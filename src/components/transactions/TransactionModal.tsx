@@ -67,7 +67,7 @@ export function TransactionModal({ isOpen, onClose, transaction, initialData }: 
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!amount || !accountId) return;
+    if (!amount || !accountId || !date) return;
     if (type === "transfer" && !toAccountId) return;
     if (type === "budget" && !budgetId) return;
 
@@ -78,7 +78,7 @@ export function TransactionModal({ isOpen, onClose, transaction, initialData }: 
       accountId,
       toAccountId: type === "transfer" ? toAccountId : undefined,
       budgetId: type === "budget" ? budgetId : undefined,
-      date,
+      date: date || format(new Date(), "yyyy-MM-dd"),
       note,
     };
 
