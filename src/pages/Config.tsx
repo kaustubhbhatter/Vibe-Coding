@@ -148,56 +148,6 @@ export function Config() {
     setIsPayModalOpen(true);
   };
 
-  const getLastCycleDate = (cycleDay: number) => {
-    const now = new Date();
-    let year = now.getFullYear();
-    let month = now.getMonth();
-    const date = now.getDate();
-
-    if (date < cycleDay) {
-      month -= 1;
-      if (month < 0) {
-        month = 11;
-        year -= 1;
-      }
-    }
-    
-    const lastDayOfMonth = new Date(year, month + 1, 0).getDate();
-    const actualCycleDay = Math.min(cycleDay, lastDayOfMonth);
-
-    return new Date(year, month, actualCycleDay, 23, 59, 59, 999);
-  };
-
-  const getPayableAmount = (account: Account) => {
-    const currentBalance = getAccountBalance(account.id, account.initialBalance);
-    if (!account.cycleDate) return Math.abs(currentBalance);
-
-    const lastCycleDate = getLastCycleDate(account.cycleDate);
-    
-    const unbilledTransactions = state.transactions.filter(t => {
-      const tDate = new Date(t.date);
-      if (tDate <= lastCycleDate) return false;
-      
-      const isPaymentOrRefund = (t.type === 'transfer' && t.toAccountId === account.id) || (t.type === 'income' && t.accountId === account.id);
-      if (isPaymentOrRefund) return false;
-      
-      return t.accountId === account.id || t.toAccountId === account.id;
-    });
-
-    const unbilledAmount = unbilledTransactions.reduce((acc, t) => {
-      if (t.type === 'income' && t.accountId === account.id) return acc + t.amount;
-      if (t.type === 'expense' && t.accountId === account.id) return acc - t.amount;
-      if (t.type === 'transfer') {
-        if (t.accountId === account.id) return acc - t.amount;
-        if (t.toAccountId === account.id) return acc + t.amount;
-      }
-      return acc;
-    }, 0);
-
-    const payable = currentBalance - unbilledAmount;
-    return payable < 0 ? Math.abs(payable) : 0;
-  };
-
   const isOverdue = (account: Account, balance: number) => {
     if (!account.dueDate) return false;
     const today = new Date().getDate();
@@ -530,7 +480,7 @@ export function Config() {
           type: 'transfer',
           accountId: state.accounts.find(a => state.groups.find(g => g.id === a.groupId)?.type === 'bank')?.id,
           toAccountId: payAccount?.id,
-          amount: payAccount ? getPayableAmount(payAccount) : 0,
+          amount: payAccount ? Math.abs(getAccountBalance(payAccount.id, payAccount.initialBalance)) : 0,
           note: `Payment for ${payAccount?.name}`
         }}
       />

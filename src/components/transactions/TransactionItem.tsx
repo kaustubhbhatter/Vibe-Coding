@@ -75,6 +75,11 @@ export const TransactionItem: React.FC<TransactionItemProps> = ({
             <span className="w-2 h-2 rounded-full" style={{ backgroundColor: account?.color || "#64748b" }} />
             {account?.name || "Unknown Account"}
             {transaction.note && <span className="text-slate-400 dark:text-slate-500">• {transaction.note}</span>}
+            {transaction.isCCPayment && (
+              <span className="ml-1 px-1.5 py-0.5 bg-cyan-100 dark:bg-cyan-900/30 text-cyan-700 dark:text-cyan-400 rounded text-[9px] font-bold uppercase tracking-wider">
+                Bill Payment
+              </span>
+            )}
           </p>
         </div>
       </div>

@@ -5,7 +5,7 @@ import { TransactionItem } from "@/components/transactions/TransactionItem";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/Card";
 import { formatCurrency, cn } from "@/lib/utils";
 import { motion, AnimatePresence } from "framer-motion";
-import { Filter, ArrowDownUp, X, Check } from "lucide-react";
+import { Filter, ArrowDownUp, X, Check, ChevronLeft, ChevronRight } from "lucide-react";
 import { Transaction } from "@/types";
 import { TransactionModal } from "@/components/transactions/TransactionModal";
 import { Button } from "@/components/ui/Button";
@@ -19,6 +19,21 @@ export function Transactions() {
   const [editingTransaction, setEditingTransaction] = useState<Transaction | null>(null);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
 
+  // Pagination / Month Selection
+  const [currentMonth, setCurrentMonth] = useState(startOfMonth(new Date()));
+
+  const handlePrevMonth = () => {
+    setCurrentMonth(prev => startOfMonth(new Date(prev.getFullYear(), prev.getMonth() - 1, 1)));
+  };
+
+  const handleNextMonth = () => {
+    setCurrentMonth(prev => startOfMonth(new Date(prev.getFullYear(), prev.getMonth() + 1, 1)));
+  };
+
+  const handleCurrentMonth = () => {
+    setCurrentMonth(startOfMonth(new Date()));
+  };
+
   // Advanced Filters
   const [showFilters, setShowFilters] = useState(false);
   const [selectedCategories, setSelectedCategories] = useState<string[]>([]);
@@ -26,6 +41,15 @@ export function Transactions() {
 
   const transactions = useMemo(() => {
     let filtered = state.transactions;
+
+    // Filter by Month
+    const start = currentMonth;
+    const end = endOfMonth(currentMonth);
+    filtered = filtered.filter(t => {
+      if (!t.date) return false;
+      const parsedDate = parseISO(t.date);
+      return isWithinInterval(parsedDate, { start, end });
+    });
 
     if (filterType !== "all") {
       filtered = filtered.filter((t) => t.type === filterType);
@@ -46,7 +70,7 @@ export function Transactions() {
       const validDateB = isNaN(dateB) ? 0 : dateB;
       return sortOrder === "desc" ? validDateB - validDateA : validDateA - validDateB;
     });
-  }, [state.transactions, filterType, sortOrder, selectedCategories, selectedAccounts]);
+  }, [state.transactions, filterType, sortOrder, selectedCategories, selectedAccounts, currentMonth]);
 
   const groupedTransactions = useMemo<{ [key: string]: Transaction[] }>(() => {
     const groups: { [key: string]: Transaction[] } = {};
@@ -72,9 +96,8 @@ export function Transactions() {
   }, [transactions]);
 
   const monthlyStats = useMemo(() => {
-    const now = new Date();
-    const start = startOfMonth(now);
-    const end = endOfMonth(now);
+    const start = currentMonth;
+    const end = endOfMonth(currentMonth);
 
     const currentMonthTransactions = state.transactions.filter((t) => {
       if (!t.date) return false;
@@ -96,7 +119,7 @@ export function Transactions() {
       expense,
       net: income - expense,
     };
-  }, [state.transactions]);
+  }, [state.transactions, currentMonth]);
 
   const handleEdit = (transaction: Transaction) => {
     setEditingTransaction(transaction);
@@ -138,7 +161,7 @@ export function Transactions() {
           
           <CardHeader className="pb-2">
             <CardTitle className="text-sm font-medium text-slate-300 uppercase tracking-wider">
-              {format(new Date(), "MMMM yyyy")} Overview
+              {format(currentMonth, "MMMM yyyy")} Overview
             </CardTitle>
           </CardHeader>
           <CardContent>
@@ -191,13 +214,40 @@ export function Transactions() {
               </Button>
             )}
           </div>
-          <button
-            onClick={() => setSortOrder(sortOrder === "desc" ? "asc" : "desc")}
-            className="flex items-center gap-1 text-xs text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200 transition-colors"
-          >
-            <ArrowDownUp size={14} />
-            {sortOrder === "desc" ? "Newest First" : "Oldest First"}
-          </button>
+
+          <div className="flex items-center gap-3">
+            {/* Month Pagination Pill */}
+            <div className="flex items-center bg-slate-100 dark:bg-slate-800 rounded-full px-1 py-0.5 border border-slate-200 dark:border-slate-700 shadow-sm">
+              <button 
+                onClick={handlePrevMonth}
+                className="p-1 hover:text-cyan-500 transition-colors text-slate-500"
+              >
+                <ChevronLeft size={14} />
+              </button>
+              
+              <button 
+                onClick={handleCurrentMonth}
+                className="px-2 text-[10px] font-bold text-slate-700 dark:text-slate-200 uppercase tracking-tight hover:text-cyan-500 transition-colors"
+              >
+                {format(currentMonth, "MMM yy")}
+              </button>
+
+              <button 
+                onClick={handleNextMonth}
+                className="p-1 hover:text-cyan-500 transition-colors text-slate-500"
+              >
+                <ChevronRight size={14} />
+              </button>
+            </div>
+
+            <button
+              onClick={() => setSortOrder(sortOrder === "desc" ? "asc" : "desc")}
+              className="flex items-center gap-1 text-xs text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200 transition-colors"
+            >
+              <ArrowDownUp size={14} />
+              {sortOrder === "desc" ? "Newest" : "Oldest"}
+            </button>
+          </div>
         </div>
 
         <AnimatePresence>

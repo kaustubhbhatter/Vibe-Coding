@@ -10,6 +10,7 @@ export interface Transaction {
   toAccountId?: string; // Destination account (for transfers)
   budgetId?: string; // Destination budget (for budget allocations)
   note?: string;
+  isCCPayment?: boolean; // Flag for credit card payments
   createdAt: number;
 }
 

@@ -14,7 +14,6 @@ interface LayoutProps {
 
 export function Layout({ children, activeTab, onTabChange, onAddTransaction }: LayoutProps) {
   const { state } = useFinance();
-  const [isAlertHovered, setIsAlertHovered] = useState(false);
 
   const getAccountBalance = (accountId: string, initialBalance: number) => {
     const transactions = state.transactions.filter(t => t.accountId === accountId || t.toAccountId === accountId);
@@ -30,10 +29,63 @@ export function Layout({ children, activeTab, onTabChange, onAddTransaction }: L
     }, initialBalance);
   };
 
+  const getLastCycleDate = (cycleDay: number) => {
+    const now = new Date();
+    let year = now.getFullYear();
+    let month = now.getMonth();
+    const date = now.getDate();
+
+    if (date < cycleDay) {
+      month -= 1;
+      if (month < 0) {
+        month = 11;
+        year -= 1;
+      }
+    }
+    
+    const lastDayOfMonth = new Date(year, month + 1, 0).getDate();
+    const actualCycleDay = Math.min(cycleDay, lastDayOfMonth);
+
+    return new Date(year, month, actualCycleDay, 0, 0, 0, 0);
+  };
+
+  const hasMadePaymentSinceCycle = (accountId: string, cycleDay: number) => {
+    const lastCycleDate = getLastCycleDate(cycleDay);
+    return state.transactions.some(t => 
+      t.toAccountId === accountId && 
+      t.isCCPayment === true && 
+      new Date(t.date) >= lastCycleDate
+    );
+  };
+
   const isOverdue = (account: any, balance: number) => {
-    if (!account.dueDate) return false;
+    if (!account.dueDate || !account.cycleDate) return false;
+    
+    // If balance is 0 or positive, no payment needed
+    if (balance >= 0) return false;
+
     const today = new Date().getDate();
-    return balance < 0 && today > account.dueDate;
+    const hasPaid = hasMadePaymentSinceCycle(account.id, account.cycleDate);
+
+    // Alert if:
+    // 1. We are past the due date and haven't paid
+    // 2. We are in the window between cycle date and due date and haven't paid (optional, but user said "alert me only if no payment has been made in the last payment window")
+    
+    // Let's assume the "payment window" is between cycleDate and dueDate.
+    // If today is between cycleDate and dueDate, and no payment made -> alert.
+    // If today is past dueDate, and no payment made -> alert.
+    
+    // Handle month wrap around for due date vs cycle date
+    // Usually cycleDate < dueDate (e.g. cycle 15, due 5 of next month)
+    // Or cycleDate > dueDate (e.g. cycle 25, due 15 of same month - less common)
+    
+    if (hasPaid) return false;
+
+    // Simple logic: if today is after cycle date, we expect a payment.
+    // If today is before cycle date, we are still in the previous cycle's window (which should have been paid).
+    // The most robust way is to check if we are currently in a state where a bill exists but no payment has been recorded since the bill date.
+    
+    return true; // If balance < 0 and !hasPaid, we show alert for CC
   };
 
   let hasAlert = false;
@@ -97,7 +149,7 @@ export function Layout({ children, activeTab, onTabChange, onAddTransaction }: L
             isActive={activeTab === "transactions"}
             onClick={() => onTabChange("transactions")}
             icon={<LayoutDashboard size={20} />}
-            label="Daily"
+            label="Spends"
             hasAlert={hasAlert}
           />
 
@@ -124,35 +176,10 @@ export function Layout({ children, activeTab, onTabChange, onAddTransaction }: L
              </Button>
              {hasAlert && (
                <div 
-                 className="absolute -bottom-6 text-rose-500 dark:text-rose-400 animate-pulse cursor-pointer" 
-                 onMouseEnter={() => setIsAlertHovered(true)}
-                 onMouseLeave={() => setIsAlertHovered(false)}
-                 onClick={() => setIsAlertHovered(!isAlertHovered)}
+                 className="absolute -bottom-6 text-rose-500 dark:text-rose-400 animate-pulse" 
+                 title={alertMessages.join('\n')}
                >
                  <Info size={18} />
-                 
-                 <AnimatePresence>
-                   {isAlertHovered && (
-                     <motion.div 
-                       initial={{ opacity: 0, y: 10, scale: 0.95 }}
-                       animate={{ opacity: 1, y: 0, scale: 1 }}
-                       exit={{ opacity: 0, y: 10, scale: 0.95 }}
-                       transition={{ duration: 0.15 }}
-                       className="absolute bottom-full left-1/2 -translate-x-1/2 mb-4 w-64 p-3 bg-white dark:bg-slate-800 rounded-xl shadow-xl border border-rose-100 dark:border-rose-900/50 text-left z-50 pointer-events-none"
-                     >
-                       <div className="text-xs font-semibold text-rose-600 dark:text-rose-400 mb-2 uppercase tracking-wider">Attention Needed</div>
-                       <ul className="space-y-1.5">
-                         {alertMessages.map((msg, i) => (
-                           <li key={i} className="text-sm text-slate-700 dark:text-slate-300 flex items-start gap-2">
-                             <div className="w-1.5 h-1.5 rounded-full bg-rose-500 mt-1.5 shrink-0" />
-                             <span>{msg}</span>
-                           </li>
-                         ))}
-                       </ul>
-                       <div className="absolute -bottom-2 left-1/2 -translate-x-1/2 w-4 h-4 bg-white dark:bg-slate-800 border-b border-r border-rose-100 dark:border-rose-900/50 rotate-45" />
-                     </motion.div>
-                   )}
-                 </AnimatePresence>
                </div>
              )}
           </div>
