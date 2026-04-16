@@ -84,7 +84,7 @@ export function TransactionModal({ isOpen, onClose, transaction, initialData }: 
       budgetId: type === "budget" ? budgetId : undefined,
       date: date || format(new Date(), "yyyy-MM-dd"),
       note,
-      isCCPayment: type === "transfer" ? isCCPayment : false,
+      isCCPayment: type === "transfer" ? (transaction?.isCCPayment ?? initialData?.isCCPayment ?? false) : false,
     };
 
     if (transaction) {
@@ -105,9 +105,6 @@ export function TransactionModal({ isOpen, onClose, transaction, initialData }: 
   const filteredCategories = state.categories.filter((c) => c.type === type);
   const availableAccounts = state.accounts.filter(a => !a.excludeFromTotals);
   const budgetAccounts = availableAccounts.filter(a => a.allowBudgeting);
-
-  const isToAccountCredit = toAccountId && state.accounts.find(a => a.id === toAccountId) && 
-    state.groups.find(g => g.id === state.accounts.find(a => a.id === toAccountId)?.groupId)?.type === 'credit';
 
   return (
     <Modal isOpen={isOpen} onClose={onClose} title={transaction ? "Edit Transaction" : "Add Transaction"}>
@@ -222,21 +219,6 @@ export function TransactionModal({ isOpen, onClose, transaction, initialData }: 
             </div>
           )}
         </div>
-
-        {type === "transfer" && isToAccountCredit && (
-          <div className="flex items-center gap-2 p-3 bg-cyan-50 dark:bg-cyan-950/30 rounded-xl border border-cyan-100 dark:border-cyan-900/50">
-            <input 
-              type="checkbox" 
-              id="isCCPayment" 
-              checked={isCCPayment}
-              onChange={(e) => setIsCCPayment(e.target.checked)}
-              className="w-4 h-4 rounded border-slate-300 text-cyan-600 focus:ring-cyan-500"
-            />
-            <label htmlFor="isCCPayment" className="text-sm font-medium text-cyan-800 dark:text-cyan-300 cursor-pointer">
-              Mark as Credit Card Bill Payment
-            </label>
-          </div>
-        )}
 
         <div>
           <label className="text-xs text-slate-500 dark:text-slate-400 mb-1 block">Note</label>

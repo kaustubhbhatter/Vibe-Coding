@@ -64,28 +64,28 @@ export function Layout({ children, activeTab, onTabChange, onAddTransaction }: L
     // If balance is 0 or positive, no payment needed
     if (balance >= 0) return false;
 
-    const today = new Date().getDate();
+    const now = new Date();
+    const today = now.getDate();
     const hasPaid = hasMadePaymentSinceCycle(account.id, account.cycleDate);
 
-    // Alert if:
-    // 1. We are past the due date and haven't paid
-    // 2. We are in the window between cycle date and due date and haven't paid (optional, but user said "alert me only if no payment has been made in the last payment window")
-    
-    // Let's assume the "payment window" is between cycleDate and dueDate.
-    // If today is between cycleDate and dueDate, and no payment made -> alert.
-    // If today is past dueDate, and no payment made -> alert.
-    
-    // Handle month wrap around for due date vs cycle date
-    // Usually cycleDate < dueDate (e.g. cycle 15, due 5 of next month)
-    // Or cycleDate > dueDate (e.g. cycle 25, due 15 of same month - less common)
-    
     if (hasPaid) return false;
 
-    // Simple logic: if today is after cycle date, we expect a payment.
-    // If today is before cycle date, we are still in the previous cycle's window (which should have been paid).
-    // The most robust way is to check if we are currently in a state where a bill exists but no payment has been recorded since the bill date.
+    // Logic: 
+    // 1. If today is within 48 hours of due date
+    // 2. If today is past the due date
     
-    return true; // If balance < 0 and !hasPaid, we show alert for CC
+    let year = now.getFullYear();
+    let month = now.getMonth();
+    const dueDateObj = new Date(year, month, account.dueDate);
+    
+    if (account.cycleDate > account.dueDate && today >= account.cycleDate) {
+      dueDateObj.setMonth(dueDateObj.getMonth() + 1);
+    }
+
+    const diffTime = dueDateObj.getTime() - now.getTime();
+    const diffHours = diffTime / (1000 * 60 * 60);
+
+    return diffHours <= 48;
   };
 
   let hasAlert = false;

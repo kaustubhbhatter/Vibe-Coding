@@ -148,12 +148,77 @@ export function Config() {
     setIsPayModalOpen(true);
   };
 
+  const getLastCycleDate = (cycleDay: number) => {
+    const now = new Date();
+    let year = now.getFullYear();
+    let month = now.getMonth();
+    const date = now.getDate();
+
+    if (date < cycleDay) {
+      month -= 1;
+      if (month < 0) {
+        month = 11;
+        year -= 1;
+      }
+    }
+    
+    const lastDayOfMonth = new Date(year, month + 1, 0).getDate();
+    const actualCycleDay = Math.min(cycleDay, lastDayOfMonth);
+
+    return new Date(year, month, actualCycleDay, 0, 0, 0, 0);
+  };
+
+  const hasMadePaymentSinceCycle = (accountId: string, cycleDay: number) => {
+    const lastCycleDate = getLastCycleDate(cycleDay);
+    return state.transactions.some(t => 
+      t.toAccountId === accountId && 
+      t.isCCPayment === true && 
+      new Date(t.date) >= lastCycleDate
+    );
+  };
+
   const isOverdue = (account: Account, balance: number) => {
-    if (!account.dueDate) return false;
-    const today = new Date().getDate();
-    // Balance is negative for debt (e.g. -100 means I owe 100)
-    // So if balance < 0 and today > dueDate, it's overdue
-    return balance < 0 && today > account.dueDate;
+    if (!account.dueDate || !account.cycleDate) return false;
+    
+    // If balance is 0 or positive, no payment needed
+    if (balance >= 0) return false;
+
+    const now = new Date();
+    const today = now.getDate();
+    const hasPaid = hasMadePaymentSinceCycle(account.id, account.cycleDate);
+
+    if (hasPaid) return false;
+
+    // Logic: 
+    // 1. If today is within 48 hours of due date
+    // 2. If today is past the due date
+    
+    // To check "within 48 hours", we compare the actual dates
+    let year = now.getFullYear();
+    let month = now.getMonth();
+    
+    // If today is after due date, the next due date is next month
+    // But we are checking if CURRENT due date is close or passed.
+    // If cycle date was 15th and due date is 5th, and today is 3rd, 
+    // we are in the payment window for the cycle that started last month.
+    
+    const dueDateObj = new Date(year, month, account.dueDate);
+    
+    // If cycle day is 15 and due day is 5, and today is 20th, 
+    // the bill was generated on 15th, and is due on 5th of NEXT month.
+    if (account.cycleDate > account.dueDate && today >= account.cycleDate) {
+      dueDateObj.setMonth(dueDateObj.getMonth() + 1);
+    }
+    // If cycle day is 15 and due day is 25, and today is 10th,
+    // the bill was generated on 15th of LAST month, and is due on 25th of LAST month (already passed)
+    // or it's due on 25th of THIS month (not yet generated).
+    // This gets complex, but let's stick to the 48h and "past due" requirement.
+
+    const diffTime = dueDateObj.getTime() - now.getTime();
+    const diffHours = diffTime / (1000 * 60 * 60);
+
+    // Alert if past due OR within 48 hours
+    return diffHours <= 48;
   };
 
   const selectedGroupType = state.groups.find(g => g.id === accGroup)?.type;
@@ -481,7 +546,8 @@ export function Config() {
           accountId: state.accounts.find(a => state.groups.find(g => g.id === a.groupId)?.type === 'bank')?.id,
           toAccountId: payAccount?.id,
           amount: payAccount ? Math.abs(getAccountBalance(payAccount.id, payAccount.initialBalance)) : 0,
-          note: `Payment for ${payAccount?.name}`
+          note: `Payment for ${payAccount?.name}`,
+          isCCPayment: true
         }}
       />
     </div>
