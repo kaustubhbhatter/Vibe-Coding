@@ -157,8 +157,6 @@ const FinanceContext = createContext<{
   deleteBudget: (id: string) => void;
 } | null>(null);
 
-const GUEST_STORAGE_KEY = "nebula_finance_guest_data";
-
 export function FinanceProvider({ children }: { children: React.ReactNode }) {
   const { user, loading } = useAuth();
   const [state, dispatch] = useReducer(reducer, initialState);
@@ -236,55 +234,56 @@ export function FinanceProvider({ children }: { children: React.ReactNode }) {
 
     if (user) {
       // LOGGED IN
+      const isDemo = user.uid.startsWith("demo-user");
       
-      // Clear current state immediately to remove guest data while real data loads
-      // This ensures no guest data is shown or saved to the user's profile
-      dispatch({ type: "RESET_STATE" });
-      dataLoadedForUser.current = null;
+      // Only reset state if the user has changed to avoid unnecessary clears
+      if (dataLoadedForUser.current !== user.uid) {
+        console.log(`User changed from ${dataLoadedForUser.current} to ${user.uid}. Loading ${isDemo ? "demo" : "remote"} data...`);
+        dispatch({ type: "RESET_STATE" });
+        dataLoadedForUser.current = null;
+      }
       
-      // Clear guest storage immediately on login
-      localStorage.removeItem(GUEST_STORAGE_KEY);
-      
-      if (db) {
+      if (isDemo) {
+        // Handle Demo User - Operating in volatile state
+        console.log("Demo mode active. Data will not be saved.");
+        seedStructureOnly();
+        dataLoadedForUser.current = user.uid;
+      } else if (db) {
+        // Real Firebase User
         const userDocRef = doc(db, "users", user.uid);
         unsubscribe = onSnapshot(userDocRef, (docSnap) => {
           if (docSnap.exists()) {
             const data = docSnap.data() as AppState;
+            console.log("Remote data loaded successfully.");
             isRemoteUpdate.current = true;
             dispatch({ type: "LOAD_STATE", payload: data });
           } else {
-             // No data for user yet. 
-             // Seed a clean structure (no dummy data).
+             console.log("No remote data found for user. Seeding structure...");
              seedStructureOnly();
           }
-          // Mark as loaded for this user to allow saving
           dataLoadedForUser.current = user.uid;
+        }, (error) => {
+          console.error("Firestore subscription error:", error);
+          // If we fail to load due to permissions/offline, don't let the user overwrite cloud data with empty state
+          dataLoadedForUser.current = null;
         });
+      } else {
+        console.error("User logged in but Firestore (db) is missing.");
+        seedStructureOnly(); 
+        // DO NOT set dataLoadedForUser to allow saving in this broken state
       }
     } else {
-      // GUEST
+      // GUEST - No persistence for guests as requested
+      console.log("No user detected. Operating in guest mode (volatile state).");
       dataLoadedForUser.current = null;
       
-      // If we just logged out, clear everything and seed defaults
-      if (prevUser.current !== undefined && prevUser.current !== null) {
-        localStorage.removeItem(GUEST_STORAGE_KEY);
+      // If we just logged out, reset state to clear previous user's data
+      if (prevUser.current) {
+        console.log("User logged out. Resetting state.");
         dispatch({ type: "RESET_STATE" });
-        seedInitialData();
-      } else {
-        // Normal guest load
-        const storedData = localStorage.getItem(GUEST_STORAGE_KEY);
-        if (storedData) {
-          try {
-            const parsedData = JSON.parse(storedData);
-            dispatch({ type: "LOAD_STATE", payload: parsedData });
-          } catch (e) {
-            console.error("Failed to parse stored data", e);
-            seedInitialData();
-          }
-        } else {
-          seedInitialData();
-        }
       }
+
+      seedInitialData();
     }
 
     prevUser.current = user;
@@ -303,17 +302,19 @@ export function FinanceProvider({ children }: { children: React.ReactNode }) {
     }
 
     if (user) {
-      // Save to Firestore ONLY if we have successfully loaded the data for this user
-      // This prevents guest data from overwriting user data during the login transition
-      if (db && dataLoadedForUser.current === user.uid && !isRemoteUpdate.current) {
-        const userDocRef = doc(db, "users", user.uid);
-        const sanitizedState = removeUndefined(state);
-        setDoc(userDocRef, sanitizedState).catch(console.error);
+      const isDemo = user.uid.startsWith("demo-user");
+      
+      // Save ONLY if we have successfully loaded the data for this user
+      if (dataLoadedForUser.current === user.uid) {
+        if (!isDemo && db) {
+          const userDocRef = doc(db, "users", user.uid);
+          const sanitizedState = removeUndefined(state);
+          setDoc(userDocRef, sanitizedState).catch(console.error);
+        }
+        // Demo users are not persisted either as they count as "guest data" in this context
       }
-    } else if (prevUser.current === null) {
-      // Save to Local Storage (Guest) ONLY if we are not in a login transition
-      localStorage.setItem(GUEST_STORAGE_KEY, JSON.stringify(state));
     }
+    // No saving for guests (localStorage)
   }, [state, user, loading]);
 
   const addTransaction = (transaction: Omit<Transaction, "id" | "createdAt">) => {

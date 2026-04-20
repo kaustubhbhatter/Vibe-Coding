@@ -17,7 +17,7 @@ export function Config() {
   const { state, addAccount, updateAccount, deleteAccount, addCategory, deleteCategory } = useFinance();
   const { user, login, logout } = useAuth();
   const { theme, toggleTheme } = useTheme();
-  
+
   const [isAccountModalOpen, setIsAccountModalOpen] = useState(false);
   const [isCategoryModalOpen, setIsCategoryModalOpen] = useState(false);
   const [editingAccount, setEditingAccount] = useState<Account | null>(null);
@@ -413,7 +413,11 @@ export function Config() {
                   {user ? user.displayName : "Guest User"}
                 </p>
                 <p className="text-xs text-slate-500 dark:text-slate-400">
-                  {user ? "Synced with Cloud" : "Local Data Only"}
+                  {user 
+                    ? user.uid.startsWith("demo-user") 
+                      ? "Demo Mode (Not Saved)" 
+                      : "Synced with Cloud" 
+                    : "Browsing as Guest (Not Saved)"}
                 </p>
               </div>
             </div>
