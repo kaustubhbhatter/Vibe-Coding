@@ -44,40 +44,16 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const login = async () => {
+    // Clear any lingering cache on fresh login per user request
+    localStorage.removeItem("nebula_finance_guest_data");
+
     if (!auth) {
-      console.warn("Authentication is disabled due to missing configuration. Using Demo User.");
-      // Demo Login
-      const demoUser: User = {
-        uid: "demo-user-123",
-        displayName: "Demo User",
-        email: "demo@example.com",
-        photoURL: null,
-        emailVerified: true,
-        isAnonymous: false,
-        metadata: {},
-        providerData: [],
-        refreshToken: "",
-        tenantId: null,
-        delete: async () => {},
-        getIdToken: async () => "",
-        getIdTokenResult: async () => ({
-          token: "",
-          signInProvider: "google",
-          claims: {},
-          authTime: "",
-          issuedAtTime: "",
-          expirationTime: "",
-          signInSecondFactor: null,
-        }),
-        reload: async () => {},
-        toJSON: () => ({}),
-        phoneNumber: null,
-        providerId: "google.com",
-      };
-      setUser(demoUser);
+      console.error("Firebase authentication is not initialized. Check firebase-applet-config.json");
+      alert("System configuration error: Firebase Auth is missing.");
       return;
     }
     const provider = new GoogleAuthProvider();
+    provider.setCustomParameters({ prompt: "select_account" }); // Force account selection
     try {
       await signInWithPopup(auth, provider);
     } catch (error) {
@@ -86,6 +62,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   };
 
   const logout = async () => {
+    // Ensure cache is completely eradicated on logout
+    localStorage.removeItem("nebula_finance_guest_data");
+    
     if (!auth) {
       setUser(null);
       return;

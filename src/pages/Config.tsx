@@ -410,32 +410,20 @@ export function Config() {
               )}
               <div>
                 <p className="font-medium text-slate-900 dark:text-slate-200">
-                  {user ? user.displayName : "Guest User"}
+                  {user?.displayName || "User"}
                 </p>
                 <p className="text-xs text-slate-500 dark:text-slate-400">
-                  {user 
-                    ? user.uid.startsWith("demo-user") 
-                      ? "Demo Mode (Not Saved)" 
-                      : "Synced with Cloud" 
-                    : "Browsing as Guest (Not Saved)"}
+                  Synced with Cloud
                 </p>
               </div>
             </div>
             <Button 
-              variant={user ? "outline" : "primary"} 
+              variant="outline"
               size="sm" 
-              onClick={user ? logout : login}
-              className={cn(user && "text-rose-500 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-900/20 border-rose-200 dark:border-rose-900")}
+              onClick={logout}
+              className="text-rose-500 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-900/20 border-rose-200 dark:border-rose-900"
             >
-              {user ? (
-                <>
-                  <LogOut size={16} className="mr-2" /> Sign Out
-                </>
-              ) : (
-                <>
-                  <LogIn size={16} className="mr-2" /> Sign In
-                </>
-              )}
+              <LogOut size={16} className="mr-2" /> Sign Out
             </Button>
           </CardContent>
         </Card>

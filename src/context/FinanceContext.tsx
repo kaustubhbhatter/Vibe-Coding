@@ -164,37 +164,6 @@ export function FinanceProvider({ children }: { children: React.ReactNode }) {
   const isRemoteUpdate = useRef(false);
   const dataLoadedForUser = useRef<string | null>(null);
 
-  // Seed initial data for guests
-  const seedInitialData = () => {
-    const bankGroup = { id: uuidv4(), name: "Bank Accounts", type: "bank" as const };
-    const cashGroup = { id: uuidv4(), name: "Cash", type: "cash" as const };
-    const shortInvestmentGroup = { id: uuidv4(), name: "Short Investments", type: "investment" as const };
-    const longInvestmentGroup = { id: uuidv4(), name: "Long Investments", type: "investment" as const };
-    const creditGroup = { id: uuidv4(), name: "Credit Cards", type: "credit" as const };
-
-    const categories = [
-      { id: uuidv4(), name: "Food & Dining", type: "expense" as const, color: "orange" },
-      { id: uuidv4(), name: "Transportation", type: "expense" as const, color: "blue" },
-      { id: uuidv4(), name: "Utilities", type: "expense" as const, color: "yellow" },
-      { id: uuidv4(), name: "Entertainment", type: "expense" as const, color: "purple" },
-      { id: uuidv4(), name: "Shopping", type: "expense" as const, color: "pink" },
-      { id: uuidv4(), name: "Salary", type: "income" as const, color: "green" },
-      { id: uuidv4(), name: "Investments", type: "income" as const, color: "indigo" },
-      { id: uuidv4(), name: "Freelance", type: "income" as const, color: "teal" },
-    ];
-
-    dispatch({
-      type: "LOAD_STATE",
-      payload: {
-        transactions: [],
-        accounts: [],
-        groups: [bankGroup, cashGroup, shortInvestmentGroup, longInvestmentGroup, creditGroup],
-        categories: categories,
-        budgets: [],
-      },
-    });
-  };
-
   // Seed structure only (no dummy data) for new authenticated users
   const seedStructureOnly = () => {
     const bankGroup = { id: uuidv4(), name: "Bank Accounts", type: "bank" as const };
@@ -273,17 +242,10 @@ export function FinanceProvider({ children }: { children: React.ReactNode }) {
         // DO NOT set dataLoadedForUser to allow saving in this broken state
       }
     } else {
-      // GUEST - No persistence for guests as requested
-      console.log("No user detected. Operating in guest mode (volatile state).");
+      // LOGGED OUT - No state is permitted when logged out.
+      console.log("No user detected. Enforcing empty state.");
       dataLoadedForUser.current = null;
-      
-      // If we just logged out, reset state to clear previous user's data
-      if (prevUser.current) {
-        console.log("User logged out. Resetting state.");
-        dispatch({ type: "RESET_STATE" });
-      }
-
-      seedInitialData();
+      dispatch({ type: "RESET_STATE" });
     }
 
     prevUser.current = user;
